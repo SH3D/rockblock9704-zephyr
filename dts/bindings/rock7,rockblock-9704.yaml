@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: MIT
+
+description: |
+  RockBLOCK 9704, Ground Control's Iridium Certus (IMT) modem board, on a
+  UART. The modem speaks JSPR, JSON lines over a fixed 230400 8N1; there is
+  no AT mode. One per system: the library underneath keeps global state.
+
+  The control pins are optional. With none, the modem is assumed powered and
+  enabled, which is how the board behaves with the pins left open.
+
+compatible: "rock7,rockblock-9704"
+
+include:
+  - uart-device.yaml
+
+properties:
+  power-gpios:
+    type: phandle-array
+    description: |
+      P_EN, the supply enable. Driven active to power the board.
+
+  iridium-enable-gpios:
+    type: phandle-array
+    description: |
+      I_EN, the modem enable. Driven active once the supply is up.
+
+  booted-gpios:
+    type: phandle-array
+    description: |
+      I_BTD, the modem's booted signal. When present, power-up waits for it
+      instead of a fixed delay.
+
+  boot-delay-ms:
+    type: int
+    default: 4000
+    description: |
+      How long to wait after enabling the modem before talking to it, when
+      there is no booted-gpios to wait on.
+
+examples:
+  - |
+    &usart3 {
+            current-speed = <230400>;
+            status = "okay";
+
+            modem: rockblock {
+                    compatible = "rock7,rockblock-9704";
+                    power-gpios = <&gpiob 0 GPIO_ACTIVE_HIGH>;
+                    iridium-enable-gpios = <&gpiob 1 GPIO_ACTIVE_HIGH>;
+                    booted-gpios = <&gpiob 2 GPIO_ACTIVE_HIGH>;
+            };
+    };

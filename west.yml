@@ -1,0 +1,45 @@
+# rockblock9704-zephyr: a west manifest for working on this module on its
+# own, and the pins an application imports.
+#
+# In an application's west.yml:
+#
+#   - name: rockblock9704-zephyr
+#     url: https://github.com/SH3D/rockblock9704-zephyr   (or gitea.sh3d.com.au/Sh3d)
+#     revision: <tag>
+#     path: modules/lib/rockblock9704-zephyr
+#     import:
+#       name-allowlist:
+#         - rockblock9704
+#
+# The import brings Ground Control's library with it, at the path this
+# module's CMakeLists.txt looks in, and nothing else. The Zephyr entry below
+# is only for working on the module alone (`west init -l` in a checkout of
+# this repository).
+manifest:
+  version: "0.13"
+
+  self:
+    path: rockblock9704-zephyr
+
+  remotes:
+    - name: zephyrproject
+      url-base: https://github.com/zephyrproject-rtos
+
+  projects:
+    # Ground Control's library, pristine, by commit (tag v1.0.1). MIT.
+    - name: rockblock9704
+      url: https://github.com/rock7/RockBLOCK-9704
+      revision: ab37e8ac7711e1ba8061835a0685c25b6069e767
+      path: modules/lib/rockblock9704
+
+    # Zephyr v4.4.0, for working on this module alone. Tested with it.
+    - name: zephyr
+      remote: zephyrproject
+      revision: 684c9e8f32e4373a21098559f748f06915f950c9
+      import:
+        name-allowlist:
+          - cmsis_6
+          - hal_stm32
+          - hal_espressif
+          - picolibc
+          - mbedtls
