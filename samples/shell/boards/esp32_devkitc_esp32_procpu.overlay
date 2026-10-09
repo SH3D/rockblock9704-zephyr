@@ -1,0 +1,12 @@
+/* ESP32 DevKitC (the original ESP32): the modem on uart2, GPIO17 (TX) and
+ * GPIO16 (RX). The console stays on uart0 through the board's USB bridge.
+ * On WROVER modules GPIO16 and GPIO17 belong to the PSRAM: use a WROOM
+ * module, or move uart2's pins here. */
+&uart2 {
+	current-speed = <230400>;
+	status = "okay";
+
+	rockblock {
+		compatible = "rock7,rockblock-9704";
+	};
+};

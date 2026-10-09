@@ -155,8 +155,9 @@ real 9704 from Python and from `native_sim`.
 ## Boards
 
 Any board with a free UART. The sample has overlays for `native_sim`,
-NUCLEO-U575ZI-Q, Seeed XIAO ESP32S3 and ESP32-S3-DevKitC, and has run on
-the first three.
+NUCLEO-U575ZI-Q, Seeed XIAO ESP32S3, ESP32-S3-DevKitC, ESP32 DevKitC and
+LilyGO T3-S3 (an out-of-tree board in OGLAST2: build with its
+`-DBOARD_ROOT`). It has run on the first three; all six build.
 
 ## Layout
 
