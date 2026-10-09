@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Scott Penrose <scottp@dd.com.au>
  *
  * rb9704_shims.c - the library's three timing calls on the Zephyr kernel,
  * in place of its crossplatform.c, which has no Zephyr branch.

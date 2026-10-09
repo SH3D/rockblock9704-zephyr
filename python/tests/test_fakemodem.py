@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Scott Penrose <scottp@dd.com.au>
 """The fake modem on its own, in this process: no serial port, no library."""
 
 import base64

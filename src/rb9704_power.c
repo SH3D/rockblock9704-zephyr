@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Scott Penrose <scottp@dd.com.au>
  *
  * rb9704_power.c - the board's control pins, as the devicetree gives them.
  *

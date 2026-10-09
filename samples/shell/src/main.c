@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Scott Penrose <scottp@dd.com.au>
  *
  * The rb9704 shell sample: `rb9704` on the console, and every message from
  * the network, every finished send and every signal change printed as it

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Scott Penrose <scottp@dd.com.au>
 """
 A real RockBLOCK 9704, with --real-modem PORT. Free checks only: identity
 and signal, never a message, so nothing here costs airtime. Indoors the

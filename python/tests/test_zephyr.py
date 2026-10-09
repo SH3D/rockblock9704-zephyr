@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Scott Penrose <scottp@dd.com.au>
 """
 Zephyr, through the shell sample, against the fake modem: on native_sim
 with --zephyr-exe, on a board with --board-console and --board-modem.

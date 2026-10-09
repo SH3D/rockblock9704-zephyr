@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Scott Penrose <scottp@dd.com.au>
 """
 rb9704-fake - a fake RockBLOCK 9704: JSPR over a serial port, no satellites.
 

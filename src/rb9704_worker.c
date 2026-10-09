@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Scott Penrose <scottp@dd.com.au>
  *
  * rb9704_worker.c - the one thread that calls into Ground Control's library.
  *

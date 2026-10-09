@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Scott Penrose <scottp@dd.com.au>
  *
  * A two-way UART bridge, for the test rig: every byte in on `host` goes out
  * on `target`, and the other way round. With `host` a board's USB serial

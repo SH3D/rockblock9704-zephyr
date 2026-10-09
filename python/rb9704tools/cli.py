@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Scott Penrose <scottp@dd.com.au>
 """
 rb9704 - drive a RockBLOCK 9704 from the host over its USB-C port.
 

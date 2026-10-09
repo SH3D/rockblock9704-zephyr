@@ -11,6 +11,13 @@ The 9704 sends and receives IMT messages of up to 100 kB through the
 Iridium network, and speaks JSPR, JSON lines over a 230400 8N1 UART. There
 is no AT mode; it is not a 9602 or 9603.
 
+rockblock9704-zephyr is written and maintained by Scott Penrose
+([Digital Dimensions](https://www.dd.com.au/)). It was built for two
+projects that send data home by satellite:
+[WII6](https://wii6.au/), a wave-measuring buoy, and
+[OGLAS](https://oglas.au/), a fleet of LoRa sensors, repeaters and hubs.
+Both run it, and neither is needed to use it.
+
 ## Ground Control's library
 
 This module does not reimplement or fork the protocol. Ground Control's
@@ -175,7 +182,31 @@ docs/TESTING.md                              the tests and how to run them
 west.yml                                     the pins
 ```
 
+## Credits
+
+- [Ground Control](https://www.groundcontrol.com/), for the RockBLOCK 9704
+  and its [C library](https://github.com/rock7/RockBLOCK-9704) (MIT),
+  which does all of the protocol work. This module builds it unchanged.
+- The serial port and the worker began in OGLAS's satellite bench and were
+  carried through WII6 before moving here.
+
 ## Licence
 
-MIT, as Ground Control's library is. The serial port and worker began in
-the OGLAS satellite bench and were carried through WII6 before moving here.
+MIT, as Ground Control's library is. See `LICENSE`.
+
+Copyright (c) 2026 Scott Penrose <scottp@dd.com.au>
+
+* https://www.sh3d.com.au/ - Sh3d
+* https://www.dd.com.au/ - Digital Dimensions
+
+## Support
+
+Report issues on the [GitHub mirror](https://github.com/SH3D/rockblock9704-zephyr/issues)
+(the Gitea instance does not allow public sign-ups). Most helpful in a
+report: the output of `rb9704 spy on` around the problem, and the modem's
+firmware version from `rb9704 info`.
+
+## Disclaimer
+
+This is not an official Ground Control product. Use at your own risk, and
+remember that every `send` costs airtime.

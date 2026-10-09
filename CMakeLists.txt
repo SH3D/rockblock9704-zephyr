@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Scott Penrose <scottp@dd.com.au>
 #
 # rockblock9704-zephyr: Ground Control's RockBLOCK 9704 library built for
 # Zephyr, with the serial port, the timing calls and one worker thread to own

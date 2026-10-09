@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Scott Penrose <scottp@dd.com.au>
 """
 The test harness: a fake modem in a process of its own, and a console to
 drive whatever is under test.

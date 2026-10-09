@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Scott Penrose <scottp@dd.com.au>
 """
 Ground Control's own Python binding (the rockblock9704 package, the same C
 library this repository builds into Zephyr) against the fake modem on a pty.

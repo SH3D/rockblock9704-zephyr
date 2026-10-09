@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Scott Penrose <scottp@dd.com.au>
  *
  * rb9704_serial.c - the library's serial port on a Zephyr UART. This is the
  * whole port: five function pointers filled into the library's global
