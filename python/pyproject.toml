@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rockblock9704-tools"
+version = "0.1.0"
+description = "Host tools for the RockBLOCK 9704: a command line for the modem and Cloudloop, and a fake modem for testing"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = ["pyserial>=3.5"]
+
+[project.optional-dependencies]
+# Ground Control's binding of the C library, for the verbs that use it.
+# Pinned with the C library in ../west.yml (v1.0.1; 1.0.2 is the first
+# Python release after it).
+modem = ["rockblock9704==1.0.2"]
+test = ["pytest>=7"]
+
+[project.scripts]
+rb9704 = "rb9704tools.cli:main"
+rb9704-fake = "rb9704tools.fakemodem:main"
+
+[tool.setuptools]
+packages = ["rb9704tools"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
