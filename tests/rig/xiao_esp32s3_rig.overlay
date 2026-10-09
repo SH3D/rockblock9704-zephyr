@@ -1,0 +1,32 @@
+/* The shell sample on a XIAO ESP32S3 in the test rig: the modem UART on
+ * D8 (GPIO7, TX) and D9 (GPIO8, RX), wired to the bridge board's target
+ * UART (bridge/). Use it in place of the sample's own XIAO overlay:
+ *   west build -b xiao_esp32s3/esp32s3/procpu samples/shell -- \
+ *     -DDTC_OVERLAY_FILE=$PWD/tests/rig/xiao_esp32s3_rig.overlay */
+&spi2 {
+	status = "disabled";	/* the board puts it on GPIO7 to 9 */
+};
+
+&pinctrl {
+	uart1_rig: uart1_rig {
+		group1 {
+			pinmux = <UART1_TX_GPIO7>;
+			output-high;
+		};
+		group2 {
+			pinmux = <UART1_RX_GPIO8>;
+			bias-pull-up;
+		};
+	};
+};
+
+&uart1 {
+	pinctrl-0 = <&uart1_rig>;
+	pinctrl-names = "default";
+	current-speed = <230400>;
+	status = "okay";
+
+	rockblock {
+		compatible = "rock7,rockblock-9704";
+	};
+};

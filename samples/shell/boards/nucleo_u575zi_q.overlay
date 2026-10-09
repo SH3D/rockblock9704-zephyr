@@ -1,0 +1,16 @@
+/* NUCLEO-U575ZI-Q: the modem on USART3, PD8 (TX) and PD9 (RX).
+ *
+ * On this board those pins share solder bridges with the ST-LINK's virtual
+ * COM port; check UM2861 before wiring. To test without a modem, the fake
+ * modem (python/rb9704tools/fakemodem.py) on a 3.3 V USB-serial adapter
+ * wired to the same pins stands in for it. */
+&usart3 {
+	pinctrl-0 = <&usart3_tx_pd8 &usart3_rx_pd9>;
+	pinctrl-names = "default";
+	current-speed = <230400>;
+	status = "okay";
+
+	rockblock {
+		compatible = "rock7,rockblock-9704";
+	};
+};

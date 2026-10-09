@@ -1,0 +1,14 @@
+/* native_sim: the modem is a host serial device, the fake modem's pty
+ * (python/rb9704tools/fakemodem.py) or a real RockBLOCK on USB. Name it at
+ * run time: ./zephyr.exe --modem_uart_port=/dev/pts/N (the node name below). */
+/ {
+	modem_uart: modem_uart {
+		compatible = "zephyr,native-tty-uart";
+		current-speed = <230400>;
+		status = "okay";
+
+		rockblock {
+			compatible = "rock7,rockblock-9704";
+		};
+	};
+};

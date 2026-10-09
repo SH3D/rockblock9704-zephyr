@@ -1,0 +1,18 @@
+/* host: USART1, the ST-LINK's virtual COM port. target: USART2 on PD5/PD6,
+ * the CN9 UART block, wired to the other board's modem UART. Both at the
+ * modem's 230400. */
+/ {
+	aliases {
+		bridge-host = &usart1;
+		bridge-target = &usart2;
+	};
+};
+
+&usart1 {
+	current-speed = <230400>;
+};
+
+&usart2 {
+	current-speed = <230400>;
+	fifo-enable;
+};

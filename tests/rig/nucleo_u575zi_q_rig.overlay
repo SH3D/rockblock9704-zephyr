@@ -1,0 +1,13 @@
+/* The shell sample on a NUCLEO-U575ZI-Q in the test rig: the modem UART on
+ * USART2, PD5 (TX) and PD6 (RX) on the CN9 UART block, wired to the bridge
+ * board's target UART (bridge/). The shell stays on the ST-LINK's port.
+ *   west build -b nucleo_u575zi_q samples/shell -- \
+ *     -DDTC_OVERLAY_FILE=$PWD/tests/rig/nucleo_u575zi_q_rig.overlay */
+&usart2 {
+	current-speed = <230400>;
+	fifo-enable;
+
+	rockblock {
+		compatible = "rock7,rockblock-9704";
+	};
+};

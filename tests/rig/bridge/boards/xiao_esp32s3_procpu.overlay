@@ -1,0 +1,33 @@
+/* host: the native USB serial port. target: uart1 on D8 (GPIO7, TX) and D9
+ * (GPIO8, RX), wired to the other board's modem UART. 230400, the modem's
+ * rate; the USB side has none. */
+/ {
+	aliases {
+		bridge-host = &usb_serial;
+		bridge-target = &uart1;
+	};
+};
+
+&spi2 {
+	status = "disabled";	/* the board puts it on GPIO7 to 9 */
+};
+
+&pinctrl {
+	uart1_bridge: uart1_bridge {
+		group1 {
+			pinmux = <UART1_TX_GPIO7>;
+			output-high;
+		};
+		group2 {
+			pinmux = <UART1_RX_GPIO8>;
+			bias-pull-up;
+		};
+	};
+};
+
+&uart1 {
+	pinctrl-0 = <&uart1_bridge>;
+	pinctrl-names = "default";
+	current-speed = <230400>;
+	status = "okay";
+};

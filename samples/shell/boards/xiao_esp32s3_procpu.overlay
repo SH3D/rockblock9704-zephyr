@@ -1,0 +1,29 @@
+/* Seeed XIAO ESP32S3: the modem on uart1, D6 (GPIO43, TX) and D7 (GPIO44,
+ * RX). The console stays on the native USB. */
+&pinctrl {
+	uart1_rb9704: uart1_rb9704 {
+		group1 {
+			pinmux = <UART1_TX_GPIO43>;
+			output-high;
+		};
+		group2 {
+			pinmux = <UART1_RX_GPIO44>;
+			bias-pull-up;
+		};
+	};
+};
+
+&uart0 {
+	status = "disabled";
+};
+
+&uart1 {
+	pinctrl-0 = <&uart1_rb9704>;
+	pinctrl-names = "default";
+	current-speed = <230400>;
+	status = "okay";
+
+	rockblock {
+		compatible = "rock7,rockblock-9704";
+	};
+};
