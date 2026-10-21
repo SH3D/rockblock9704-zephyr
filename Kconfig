@@ -26,6 +26,8 @@ config RB9704_MESSAGE_MAX
 	  this module for the copy rb9704_send takes. 2 kB is three buffers of
 	  2 kB; raise it as far as the RAM allows.
 
+DT_COMPAT_ROCK7_ROCKBLOCK_9704 := rock7,rockblock-9704
+
 config RB9704_POWER
 	bool "Drive the power pins from devicetree"
 	default y if $(dt_compat_any_has_prop,$(DT_COMPAT_ROCK7_ROCKBLOCK_9704),power-gpios)

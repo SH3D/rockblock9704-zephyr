@@ -377,8 +377,11 @@ static void complete(void)
 }
 
 /* Caller side. The slot is held from here until the caller has read the
- * result, or until the worker finishes a request the caller gave up on. */
-static int submit(k_timeout_t timeout, bool async_ok)
+ * result, or until the worker finishes a request the caller gave up on.
+ * Abandonment is reported apart from the result: a request can itself end
+ * in -ETIMEDOUT (a begin whose modem never signals booted), and then the
+ * slot is still the caller's to give back. */
+static int submit(k_timeout_t timeout, bool *abandoned)
 {
 	k_spinlock_key_t key;
 	int rc;
@@ -388,13 +391,12 @@ static int submit(k_timeout_t timeout, bool async_ok)
 	k_event_post(&rb9704_ev, EV_REQ);
 	rc = k_sem_take(&rb9704_done, timeout);
 	key = k_spin_lock(&req_lock);
-	if (rc != 0 && req.state != REQ_DONE) {
+	*abandoned = rc != 0 && req.state != REQ_DONE;
+	if (*abandoned) {
 		req.state = REQ_ABANDONED;
-		k_spin_unlock(&req_lock, key);
-		return async_ok ? -EINPROGRESS : -ETIMEDOUT;
 	}
 	k_spin_unlock(&req_lock, key);
-	return req.result;
+	return *abandoned ? 0 : req.result;
 }
 
 static int take_slot(k_timeout_t timeout)
@@ -407,16 +409,18 @@ static int take_slot(k_timeout_t timeout)
 
 static int simple(enum op op, k_timeout_t timeout)
 {
+	bool abandoned;
 	int rc = take_slot(timeout);
 
 	if (rc != 0) {
 		return rc;
 	}
 	req.op = op;
-	rc = submit(timeout, false);
-	if (rc != -ETIMEDOUT) {
-		k_sem_give(&rb9704_slot);
+	rc = submit(timeout, &abandoned);
+	if (abandoned) {
+		return -ETIMEDOUT;
 	}
+	k_sem_give(&rb9704_slot);
 	return rc;
 }
 
@@ -429,6 +433,7 @@ void rb9704_set_callbacks(const struct rb9704_callbacks *cb)
 
 int rb9704_power(bool on)
 {
+	bool abandoned;
 	int rc;
 
 	if (!rb9704_power_present()) {
@@ -440,7 +445,10 @@ int rb9704_power(bool on)
 	}
 	req.op = OP_POWER;
 	req.on = on;
-	rc = submit(K_FOREVER, false);
+	rc = submit(K_FOREVER, &abandoned);
+	if (abandoned) {
+		return -ETIMEDOUT;
+	}
 	k_sem_give(&rb9704_slot);
 	return rc;
 }
@@ -462,15 +470,16 @@ int rb9704_signal(k_timeout_t timeout)
 
 int rb9704_info(struct rb9704_info *out, k_timeout_t timeout)
 {
+	bool abandoned;
 	int rc = take_slot(timeout);
 
 	if (rc != 0) {
 		return rc;
 	}
 	req.op = OP_INFO;
-	rc = submit(timeout, false);
-	if (rc == -ETIMEDOUT) {
-		return rc;
+	rc = submit(timeout, &abandoned);
+	if (abandoned) {
+		return -ETIMEDOUT;
 	}
 	if (rc == 0) {
 		*out = req.info;
@@ -481,6 +490,7 @@ int rb9704_info(struct rb9704_info *out, k_timeout_t timeout)
 
 int rb9704_send(uint16_t topic, const void *data, size_t len, k_timeout_t timeout)
 {
+	bool abandoned;
 	int rc;
 
 	if (topic < RB9704_TOPIC_MIN || data == NULL || len == 0 || len > sizeof(mo_buf)) {
@@ -494,10 +504,11 @@ int rb9704_send(uint16_t topic, const void *data, size_t len, k_timeout_t timeou
 	req.topic = topic;
 	req.len = len;
 	memcpy(mo_buf, data, len);
-	rc = submit(timeout, true);
-	if (rc != -EINPROGRESS) {
-		k_sem_give(&rb9704_slot);
+	rc = submit(timeout, &abandoned);
+	if (abandoned) {
+		return -EINPROGRESS;
 	}
+	k_sem_give(&rb9704_slot);
 	return rc;
 }
 

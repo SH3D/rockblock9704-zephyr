@@ -83,6 +83,11 @@ int rb9704_power_set(bool want)
 		while (gpio_pin_get_dt(&btd) != 1) {
 			if (k_uptime_get() > until) {
 				LOG_ERR("modem did not signal booted in %d ms", BOOT_TIMEOUT_MS);
+				/* Back down, so the next attempt starts from off. */
+				if (en.port != NULL) {
+					(void)gpio_pin_set_dt(&en, 0);
+				}
+				(void)gpio_pin_set_dt(&pwr, 0);
 				return -ETIMEDOUT;
 			}
 			k_msleep(50);

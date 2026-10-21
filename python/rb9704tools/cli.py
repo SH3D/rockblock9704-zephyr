@@ -76,7 +76,7 @@ def find_ports():
     try:
         from serial.tools import list_ports
     except ImportError:
-        die("pyserial is missing; run host/rockblock/install.sh")
+        die("pyserial is missing; run python/install.sh")
     out = []
     for p in list_ports.comports():
         is_rb = p.vid == FTDI_VID and p.pid == FT234X_PID
@@ -95,7 +95,7 @@ def pick_port(arg):
         return rbs[0].device
     if not rbs:
         die("no FTDI FT234XD attached; plug the 9704's USB-C in, or give -p PORT "
-            "(rb9704.py ports lists them)")
+            "(rb9704 ports lists them)")
     die("more than one FT234XD attached (" + ", ".join(p.device for p in rbs) +
         "); give -p PORT")
 
@@ -122,7 +122,7 @@ def open_rb(port):
     try:
         from rockblock9704 import RockBlock9704
     except ImportError:
-        die("rockblock9704 is missing; run host/rockblock/install.sh")
+        die("rockblock9704 is missing; run python/install.sh")
     rb = RockBlock9704()
     if not rb.begin(port):
         die(f"begin({port}) failed: wrong port, modem not booted (green RDY "
@@ -311,9 +311,9 @@ def cmd_listen(a):
 
 
 def cmd_session(a):
-    """One MO, then listen until a.quiet seconds pass with no new MT. This is
-    the 9704 session designed in docs/PLAN.md, "The session", run from the
-    host so the quiet window can be chosen from what is seen."""
+    """One MO, then listen until a.quiet seconds pass with no new MT: a
+    buoy's or a hub's session, run from the host so the quiet window can
+    be chosen from what is seen."""
     data = payload(a)
     port = pick_port(a.port)
     confirm(data, a.topic, a.yes)
