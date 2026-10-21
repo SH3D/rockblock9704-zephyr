@@ -46,7 +46,7 @@
 
 LOG_MODULE_REGISTER(rb9704, CONFIG_RB9704_LOG_LEVEL);
 
-enum op { OP_BEGIN, OP_END, OP_SEND, OP_INFO, OP_SIGNAL, OP_POWER };
+enum op { OP_BEGIN, OP_END, OP_SEND, OP_CANCEL, OP_INFO, OP_SIGNAL, OP_POWER };
 enum req_state { REQ_PENDING, REQ_DONE, REQ_ABANDONED };
 
 static struct {
@@ -74,6 +74,7 @@ static K_MUTEX_DEFINE(rb9704_st_lock);
 
 static const struct rb9704_callbacks *app;
 static bool mt_waiting;
+static bool mo_cancel_asked;	/* so the failure that follows reads -ECANCELED */
 
 #if !IS_ENABLED(CONFIG_RB9704_POWER)
 int rb9704_power_init(void)
@@ -99,14 +100,19 @@ bool rb9704_power_present(void)
 
 static void cb_mo_started(const uint16_t id)
 {
+	k_mutex_lock(&rb9704_st_lock, K_FOREVER);
+	st.mo_id = id;
+	st.mo_started_ms = k_uptime_get();
+	k_mutex_unlock(&rb9704_st_lock);
 	LOG_DBG("MO accepted by the modem: id %u", id);
 }
 
 static void cb_mo_complete(const uint16_t id, const rbMsgStatus_t status)
 {
 	uint16_t topic;
-	int result = status == RB_MSG_STATUS_OK ? 0 : -EIO;
+	int result = status == RB_MSG_STATUS_OK ? 0 : mo_cancel_asked ? -ECANCELED : -EIO;
 
+	mo_cancel_asked = false;
 	k_mutex_lock(&rb9704_st_lock, K_FOREVER);
 	st.mo_in_flight = false;
 	topic = st.mo_topic;
@@ -116,7 +122,8 @@ static void cb_mo_complete(const uint16_t id, const rbMsgStatus_t status)
 		st.mo_failed++;
 	}
 	k_mutex_unlock(&rb9704_st_lock);
-	LOG_INF("MO %s: topic %u id %u", result == 0 ? "sent" : "failed", topic, id);
+	LOG_INF("MO %s: topic %u id %u",
+		result == 0 ? "sent" : result == -ECANCELED ? "cancelled" : "failed", topic, id);
 	if (app != NULL && app->mo_done != NULL) {
 		app->mo_done(topic, id, result, app->user);
 	}
@@ -180,6 +187,16 @@ static const rbCallbacks_t callbacks = {
 
 /* --- the requests, on this thread --------------------------------------- */
 
+/* Two of the library's globals, as of the commit west.yml pins (v1.0.1);
+ * neither is static there, and a bump of the pin should check they still
+ * are not. messageProvisioningInfo is its provisioning cache (op_send).
+ * moQueuedMessages counts the MOs it holds; rbBegin empties the queue but
+ * leaves the count, and a count above zero makes the next send queue
+ * without transmitting, so a begin after a stuck send would never send
+ * again. */
+extern jsprMessageProvisioning_t messageProvisioningInfo;
+extern uint16_t moQueuedMessages;
+
 static int op_begin(void)
 {
 	if (st.begun) {
@@ -199,8 +216,11 @@ static int op_begin(void)
 	if (!rbBegin("zephyr")) {	/* the port name is unused: the UART is in devicetree */
 		return -EIO;
 	}
+	moQueuedMessages = 0;	/* rbBegin emptied the queue; this is the count of it */
+	mo_cancel_asked = false;
 	k_mutex_lock(&rb9704_st_lock, K_FOREVER);
 	st.begun = true;
+	st.mo_in_flight = false;
 	k_mutex_unlock(&rb9704_st_lock);
 	return 0;
 }
@@ -234,9 +254,7 @@ static bool topic_provisioned(uint16_t topic)
  * keeps the answer for good, a miss included, so a modem provisioned after
  * that would refuse every topic until a reboot. When the topic is not in
  * what it kept, clear the cache and the library asks again: one free JSPR
- * round trip. messageProvisioningInfo is the library's own global. */
-extern jsprMessageProvisioning_t messageProvisioningInfo;
-
+ * round trip. */
 static int op_send(void)
 {
 	bool known;
@@ -268,6 +286,24 @@ static int op_send(void)
 	st.mo_in_flight = true;
 	st.mo_topic = req.topic;
 	k_mutex_unlock(&rb9704_st_lock);
+	return 0;
+}
+
+/* The modem answers a cancel with a 299 messageOriginateStatus, which the
+ * library reads in rbPoll as a failed MO and removes from its queue; the
+ * flag set here turns that failure into -ECANCELED in cb_mo_complete. */
+static int op_cancel(void)
+{
+	if (!st.begun) {
+		return -ENOTCONN;
+	}
+	if (!st.mo_in_flight) {
+		return -ENOENT;
+	}
+	if (!rbCancelMessage(st.mo_topic, st.mo_id)) {
+		return -EIO;
+	}
+	mo_cancel_asked = true;
 	return 0;
 }
 
@@ -349,6 +385,7 @@ static int dispatch(void)
 	case OP_BEGIN: return op_begin();
 	case OP_END: return op_end();
 	case OP_SEND: return op_send();
+	case OP_CANCEL: return op_cancel();
 	case OP_INFO: return op_info();
 	case OP_SIGNAL: return op_signal();
 	case OP_POWER: return op_power();
@@ -466,6 +503,11 @@ int rb9704_end(k_timeout_t timeout)
 int rb9704_signal(k_timeout_t timeout)
 {
 	return simple(OP_SIGNAL, timeout);
+}
+
+int rb9704_cancel(k_timeout_t timeout)
+{
+	return simple(OP_CANCEL, timeout);
 }
 
 int rb9704_info(struct rb9704_info *out, k_timeout_t timeout)

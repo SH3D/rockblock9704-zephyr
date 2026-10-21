@@ -747,7 +747,12 @@ Everything else is ignored.
    ignores the failed add (`queued >= 0`, `src/rockblock_9704.c:400`) and
    **re-sends the old stuck message** with a new `PUT messageOriginate`. A late
    `299 messageOriginateStatus` for the old id, read by any later `rbPoll`,
-   clears it.
+   clears it. The async path has the same hole with no timeout at all: the
+   MO is removed only by a final status, and `rbCancelMessage` is the one
+   way to ask for one. `rbEnd` then `rbBegin` empties the queue
+   (`imtQueueInit`) but not `moQueuedMessages`, so with the count still 1
+   the next `rbSendMessageAsync` queues (`moQueuedMessages == 0` is false)
+   and never transmits. The Zephyr module zeroes the count after `rbBegin`.
 9. **`200 messageOriginate` alone means started**, whatever
    `message_response` says (4.3 step 2).
 10. **`rbReceiveMessage` has no timeout** once an MT has been announced.

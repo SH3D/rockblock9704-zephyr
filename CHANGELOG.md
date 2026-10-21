@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- `rb9704_cancel()` and `rb9704 cancel`: ask the modem to abandon the
+  message in flight; `mo_done` then reports `-ECANCELED`. The status
+  snapshot carries the in-flight message's id and start time. The fake
+  modem's `mo-hold` and `mo-release` stand in for a modem that has taken
+  a message and gone quiet.
+- `rb9704_begin` zeroes the library's count of queued MOs, which `rbBegin`
+  leaves behind and which would otherwise stop every send after a stuck
+  one.
+- `rb9704 send`: no fourth `CONFIG_RB9704_MESSAGE_MAX` buffer; text goes
+  straight through, hex into a buffer the size of a shell line.
+- `rb9704`: a Cloudloop error, a bad token's `{"error": ...}` in a 200
+  reply included, and a port that will not open are one line and a
+  non-zero exit, not a traceback or a quiet success; a one-word `jspr`
+  line is refused instead of raising.
 - `CONFIG_RB9704_POWER` now defaults on when the devicetree node has
   `power-gpios`, as documented. The Kconfig default referred to a compat
   variable nothing defined, so the pins were never driven unless the

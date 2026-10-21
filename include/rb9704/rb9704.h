@@ -81,6 +81,8 @@ struct rb9704_status {
 	/* messages */
 	bool mo_in_flight;
 	uint16_t mo_topic;
+	uint16_t mo_id;		/* the modem's id for it */
+	int64_t mo_started_ms;	/* uptime when the modem accepted it */
 	uint32_t mo_sent, mo_failed;
 	uint32_t mt_received, mt_failed;
 	/* the serial port */
@@ -99,7 +101,8 @@ struct rb9704_mt {
  * blocking rb9704_* request from one: the worker is the thread that would
  * have to answer it. Any member may be NULL. */
 struct rb9704_callbacks {
-	/* An MO has finished: result 0 when the network has it. */
+	/* An MO has finished: result 0 when the network has it, -ECANCELED
+	 * after rb9704_cancel, -EIO otherwise. */
 	void (*mo_done)(uint16_t topic, uint16_t id, int result, void *user);
 	/* An MT has arrived whole. It is acknowledged to the modem after this
 	 * returns, so copy what is wanted. */
@@ -140,6 +143,18 @@ int rb9704_end(k_timeout_t timeout);
  *   -EAGAIN    the request slot was taken and the timeout ran out
  */
 int rb9704_send(uint16_t topic, const void *data, size_t len, k_timeout_t timeout);
+
+/* Ask the modem to abandon the message in flight. Returns 0 once the
+ * request is on the wire; the outcome, -ECANCELED when the modem agrees,
+ * comes through mo_done, and until then the message counts as in flight.
+ * The library has no timeout of its own, so this is how an application
+ * frees a modem that has gone quiet mid-send; a modem that does not answer
+ * the cancel either is reset by rb9704_end and rb9704_begin.
+ *
+ *   -ENOTCONN  not begun
+ *   -ENOENT    nothing in flight
+ */
+int rb9704_cancel(k_timeout_t timeout);
 
 /* Ask the modem who it is. Free, milliseconds. */
 int rb9704_info(struct rb9704_info *out, k_timeout_t timeout);

@@ -7,7 +7,7 @@ name = "rockblock9704-tools"
 version = "0.1.0"
 description = "Host tools for the RockBLOCK 9704: a command line for the modem and Cloudloop, and a fake modem for testing"
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
 authors = [{ name = "Scott Penrose", email = "scottp@dd.com.au" }]
 requires-python = ">=3.10"
 dependencies = ["pyserial>=3.5"]

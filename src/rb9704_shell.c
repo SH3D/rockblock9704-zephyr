@@ -34,6 +34,8 @@ static const char *err_name(int rc)
 	case EINPROGRESS: return "EINPROGRESS";
 	case ENOTSUP: return "ENOTSUP";
 	case EDEADLK: return "EDEADLK";
+	case ENOENT: return "ENOENT";
+	case ECANCELED: return "ECANCELED";
 	default: return "?";
 	}
 }
@@ -90,8 +92,11 @@ static int cmd_status(const struct shell *sh, size_t argc, char **argv)
 	} else {
 		shell_print(sh, "topics    provisioning not seen yet");
 	}
-	shell_print(sh, "mo        %u sent, %u failed%s", s.mo_sent, s.mo_failed,
-		    s.mo_in_flight ? ", one in flight" : "");
+	shell_print(sh, "mo        %u sent, %u failed", s.mo_sent, s.mo_failed);
+	if (s.mo_in_flight) {
+		shell_print(sh, "          one in flight: topic %u id %u, %lld s so far", s.mo_topic,
+			    s.mo_id, (k_uptime_get() - s.mo_started_ms) / 1000);
+	}
 	shell_print(sh, "mt        %u received, %u failed", s.mt_received, s.mt_failed);
 	shell_print(sh, "serial    %u bytes dropped", s.rx_dropped);
 	return 0;
@@ -153,24 +158,30 @@ static int unhex(const char *s, uint8_t *out, size_t cap)
 
 static int cmd_send(const struct shell *sh, size_t argc, char **argv)
 {
-	static uint8_t buf[CONFIG_RB9704_MESSAGE_MAX];
+	/* An argument cannot be longer than the shell's line, and two hex
+	 * digits make a byte. rb9704_send copies, so text goes as it is. */
+	static uint8_t hexbuf[CONFIG_SHELL_CMD_BUFF_SIZE / 2];
 	unsigned long topic = strtoul(argv[1], NULL, 10);
-	bool hex = strcmp(argv[0], "sendhex") == 0;
-	int len;
+	const uint8_t *data = (const uint8_t *)argv[2];
+	int len = strlen(argv[2]);
 
 	ARG_UNUSED(argc);
-	if (hex) {
-		len = unhex(argv[2], buf, sizeof(buf));
-	} else {
-		len = MIN(strlen(argv[2]), sizeof(buf));
-		memcpy(buf, argv[2], len);
+	if (strcmp(argv[0], "sendhex") == 0) {
+		len = unhex(argv[2], hexbuf, sizeof(hexbuf));
+		data = hexbuf;
 	}
 	if (len <= 0) {
 		shell_error(sh, "nothing to send (%d)", len);
 		return -EINVAL;
 	}
 	shell_print(sh, "%d bytes on topic %lu: this costs airtime", len, topic);
-	return report(sh, "send", rb9704_send((uint16_t)topic, buf, len, WAIT));
+	return report(sh, "send", rb9704_send((uint16_t)topic, data, len, WAIT));
+}
+
+static int cmd_cancel(const struct shell *sh, size_t argc, char **argv)
+{
+	ARG_UNUSED(argc); ARG_UNUSED(argv);
+	return report(sh, "cancel", rb9704_cancel(WAIT));
 }
 
 static int cmd_spy(const struct shell *sh, size_t argc, char **argv)
@@ -192,6 +203,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(rb9704_cmds,
 	SHELL_CMD(signal, NULL, "signal bars now", cmd_signal),
 	SHELL_CMD_ARG(send, NULL, "send <topic> <text>: one message, costs airtime", cmd_send, 3, 0),
 	SHELL_CMD_ARG(sendhex, NULL, "sendhex <topic> <hex>: one message, costs airtime", cmd_send, 3, 0),
+	SHELL_CMD(cancel, NULL, "ask the modem to abandon the message in flight", cmd_cancel),
 	SHELL_CMD_ARG(spy, NULL, "spy on|off: print every JSPR line", cmd_spy, 2, 0),
 	SHELL_SUBCMD_SET_END);
 

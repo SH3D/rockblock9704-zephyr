@@ -38,6 +38,10 @@ static void isr(const struct device *dev, void *user)
 			uint32_t n = ring_buf_get_claim(back, &p, 64);
 
 			if (n == 0) {
+				/* The other port's ISR may have put bytes in `back`
+				 * and re-enabled TX since the claim; they then wait
+				 * for its next byte, which with two-way traffic is
+				 * soon. Not worth a lock here. */
 				uart_irq_tx_disable(dev);
 			} else {
 				int w = uart_fifo_fill(dev, p, n);

@@ -203,7 +203,7 @@ def zephyr(request):
     cfg = request.config
     if request.param == "none":
         pytest.skip("no Zephyr target: --zephyr-exe or --board-console")
-    topics = getattr(request, "node").get_closest_marker("topics")
+    topics = request.node.get_closest_marker("topics")
     topics = topics.args[0] if topics else "244"
     if request.param == "board" and not cfg.getoption("--board-modem"):
         pytest.skip("--board-console needs --board-modem")

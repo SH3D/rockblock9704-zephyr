@@ -85,6 +85,33 @@ def test_mo_with_a_bad_crc():
     assert any(e.startswith("MOBAD 244") for e in w.events)
 
 
+def mo_whole(w, payload):
+    whole = with_crc(payload)
+    w.put('PUT messageOriginate {"topic_id":244, "message_length":%d, "request_reference":1}'
+          % len(whole))
+    mid = w.lines()[0][2]["message_id"]
+    w.put('PUT messageOriginateSegment {"topic_id":244, "message_id":%d, "segment_length":%d,'
+          ' "segment_start":0, "data":"%s"}' % (mid, len(whole), base64.b64encode(whole).decode()))
+    return mid
+
+
+def test_held_mo_is_released_or_cancelled():
+    w = Wire()
+    w.m.control("mo-hold")
+    mid = mo_whole(w, b"held")
+    assert [t for _, t, _ in w.lines()] == ["messageOriginateSegment"]  # no status yet
+    w.put('PUT messageOriginateStatus {"topic_id":244, "message_id":%d, "action":"cancel"}' % mid)
+    got = w.lines()
+    assert got[-1][1:] == ("messageOriginateStatus", {"topic_id": 244, "message_id": mid,
+                                                     "final_mo_status":
+                                                     "message_cancelled_in_transit"})
+    w.m.control("mo-hold")
+    mid = mo_whole(w, b"held-again")
+    w.lines()
+    w.m.control("mo-release")
+    assert w.lines()[-1][2]["final_mo_status"] == "mo_ack_received"
+
+
 def test_unprovisioned_topic_is_refused():
     w = Wire(topics=())
     w.put('PUT messageOriginate {"topic_id":244, "message_length":7, "request_reference":1}')

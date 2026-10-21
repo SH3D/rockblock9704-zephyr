@@ -78,6 +78,30 @@ def test_send_refused_by_the_modem(zephyr):
     c.out.expect(r"send: -\d+ EIO")
 
 
+def test_cancel_a_send_the_modem_sits_on(zephyr):
+    """The modem took the message and said nothing more, as one waiting for
+    a satellite does; cancel frees the module, and a send then goes."""
+    c, f = zephyr
+    begin(zephyr)
+    f.cmd("mo-hold")
+    c.sh("rb9704 send 244 stuck")
+    c.out.expect(r"send: ok")
+    m = f.out.expect(r"^MO 244 (\d+) ")
+    c.sh("rb9704 info")
+    c.out.expect(r"info: -\d+ EBUSY")
+    c.sh("rb9704 status")
+    c.out.expect(r"one in flight: topic 244 id %s" % m.group(1))
+    c.sh("rb9704 cancel")
+    c.out.expect(r"cancel: ok")
+    c.out.expect(r"mo done topic 244 id %s result -\d+" % m.group(1))
+    c.sh("rb9704 cancel")
+    c.out.expect(r"cancel: -\d+ ENOENT")
+    c.sh("rb9704 send 244 after-cancel")
+    c.out.expect(r"send: ok")
+    f.out.expect(r"^MO 244 \d+ ")
+    c.out.expect(r"result 0")
+
+
 def test_topic_below_64_is_refused_here(zephyr):
     c, f = zephyr
     begin(zephyr)

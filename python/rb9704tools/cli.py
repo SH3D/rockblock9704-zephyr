@@ -38,6 +38,7 @@ import json
 import os
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -361,7 +362,10 @@ class Jspr:
 
     def __init__(self, port):
         import serial
-        self.s = serial.Serial(port, BAUD, timeout=0.1)
+        try:
+            self.s = serial.Serial(port, BAUD, timeout=0.1)
+        except serial.SerialException as e:
+            die(f"cannot open {port}: {e}")
         self.buf = b""
         self.s.reset_input_buffer()
 
@@ -382,7 +386,10 @@ class Jspr:
     def cmd(self, line, target=None, secs=3.0, show=False):
         """Send a line, return the first response for its target. Anything
         else that arrives meanwhile is shown as it goes past."""
-        target = target or line.split()[1]
+        words = line.split()
+        if target is None and len(words) < 2:
+            die(f"not a JSPR line: {line!r} (verb, target, json)")
+        target = target or words[1]
         self.s.write((line + "\r").encode())
         for code, tgt, js, raw in self.lines(secs):
             if show or tgt != target or code == 299:
@@ -494,11 +501,27 @@ def api(path, **params):
     them, in the query string."""
     q = urllib.parse.urlencode({"token": token(), **params})
     req = urllib.request.Request(f"{CLOUDLOOP}{path}?{q}", data=b"", method="POST")
-    with urllib.request.urlopen(req, timeout=30) as r:
-        body = json.load(r)
-    for k in ("DispatcherException", "DispatcherValidationException"):
-        if k in body:
-            die(f"{path}: {json.dumps(body[k])}")
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            body = json.load(r)
+    except urllib.error.HTTPError as e:
+        die(f"{path}: HTTP {e.code} {e.reason}" +
+            (": the token was not accepted" if e.code in (401, 403) else ""))
+    except (urllib.error.URLError, TimeoutError) as e:
+        die(f"{path}: {getattr(e, 'reason', e)}")
+    except ValueError:
+        die(f"{path}: the reply was not JSON")
+    # Failures come back as HTTP 200 with the exception named in the body:
+    # {"error": "DispatcherAuthenticationException"} for a bad token, or the
+    # exception's name as a key with its details under it.
+    if isinstance(body, dict):
+        if body.get("error"):
+            die(f"{path}: {body['error']}" +
+                (" (the token was not accepted)" if "Authentication" in str(body["error"])
+                 else ""))
+        for k in body:
+            if k.startswith("Dispatcher") and k.endswith("Exception"):
+                die(f"{path}: {k} {json.dumps(body[k])}")
     return body
 
 

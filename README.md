@@ -49,6 +49,12 @@ The library's source shows several things a caller has to work around;
   the reader discards lines it is not waiting for. Info and signal
   requests are refused with `-EBUSY` while a message is moving.
 - **No locking.** Every library call is on the worker thread.
+- **A send has no timeout, and the queue's count survives `rbEnd`.** The
+  async path only reacts to lines from the modem, so a modem that goes
+  quiet mid-send leaves the message in flight for good; `rb9704_cancel`
+  asks the modem to abandon it. `rbBegin` empties the queue but not the
+  count of it, which would make every send after a stuck one queue
+  without transmitting; `rb9704_begin` zeroes the count.
 
 Others are for upstream to fix, and are listed in `docs/JSPR.md` for that:
 `setState` waits for a misspelt target, a line with no status code reads
@@ -106,6 +112,7 @@ rb9704_set_callbacks(&cb);
 rb9704_begin(K_SECONDS(30));
 rb9704_send(RB9704_TOPIC_RAW, buf, len, K_SECONDS(10));	/* costs airtime */
 rb9704_send(RB9704_TOPIC_RAW, buf, len, K_NO_WAIT);	/* queues, never blocks */
+rb9704_cancel(K_SECONDS(10));				/* the one in flight; -ECANCELED via mo_done */
 ```
 
 Every request takes a timeout and waits no longer; with `K_NO_WAIT` a send
@@ -131,6 +138,7 @@ rb9704 status            what is known, without asking the modem
 rb9704 info              IMEI, serial, versions, ICCID, SIM, temperature
 rb9704 signal            bars now
 rb9704 send <topic> <text>  |  sendhex <topic> <hex>     costs airtime
+rb9704 cancel            abandon the message in flight
 rb9704 spy on|off        every JSPR line, both ways
 ```
 

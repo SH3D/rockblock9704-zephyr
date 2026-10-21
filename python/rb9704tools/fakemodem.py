@@ -23,6 +23,10 @@ Control is one command per line on stdin, events one per line on stdout:
     topics <id>[,<id>...]    the provisioning from now on (empty: none)
     mo-fail <status>         the next MO ends with this final_mo_status
     mo-refuse                the next PUT messageOriginate is refused (406)
+    mo-hold                  the next MO is taken but its final status is
+                             withheld, as a modem waiting for a satellite,
+                             until mo-release or a cancel
+    mo-release               send the withheld final status
     segment <n>              ask for MO segments of n bytes (default 1446)
     state <state>            the operationalState from now on
     quit
@@ -89,6 +93,8 @@ class FakeModem:
         self.mo = None          # the MO being received
         self.mo_fail = None     # final status for the next MO
         self.mo_refuse = False
+        self.mo_hold = False    # the next MO's final status waits for mo-release
+        self.held = None        # (topic, id, status) withheld
         self.imei = "300434030000000"
         self.serial = "123456"
         self.iccid = "8988169712345678901"
@@ -236,18 +242,35 @@ class FakeModem:
         status = self.mo_fail or ("mo_ack_received" if good else "crc_error_in_transfer")
         self.mo_fail = None
         self.mo = None
-        self.send(299, "messageOriginateStatus", {"topic_id": mo["topic"], "message_id": mo["id"],
+        if self.mo_hold:
+            self.mo_hold = False
+            self.held = (mo["topic"], mo["id"], status)
+            return
+        self.mo_status(mo["topic"], mo["id"], status)
+
+    def mo_status(self, topic, mid, status):
+        self.send(299, "messageOriginateStatus", {"topic_id": topic, "message_id": mid,
                                                   "final_mo_status": status})
 
     def on_put_messageOriginateStatus(self, body):
         # Cancel: the library does not read the reply, only the status after.
         self.send(200, "messageOriginateStatus", {})
-        if self.mo is not None and body.get("action") == "cancel":
+        if body.get("action") != "cancel":
+            return
+        if self.mo is not None:
             mo, self.mo = self.mo, None
-            self.send(299, "messageOriginateStatus", {"topic_id": mo["topic"],
-                                                      "message_id": mo["id"],
-                                                      "final_mo_status":
-                                                      "message_cancelled_pre_transit"})
+            self.mo_status(mo["topic"], mo["id"], "message_cancelled_pre_transit")
+        elif self.held is not None and self.held[1] == body.get("message_id"):
+            topic, mid, _ = self.held
+            self.held = None
+            self.mo_status(topic, mid, "message_cancelled_in_transit")
+
+    def release(self):
+        with self.lock:
+            if self.held is not None:
+                topic, mid, status = self.held
+                self.held = None
+                self.mo_status(topic, mid, status)
 
     # --- what the network does --------------------------------------------
 
@@ -293,6 +316,10 @@ class FakeModem:
             self.mo_fail = w[1]
         elif cmd == "mo-refuse":
             self.mo_refuse = True
+        elif cmd == "mo-hold":
+            self.mo_hold = True
+        elif cmd == "mo-release":
+            self.release()
         elif cmd == "segment":
             self.segment = max(1, min(MO_SEGMENT_MAX, int(w[1])))
         elif cmd == "state":
