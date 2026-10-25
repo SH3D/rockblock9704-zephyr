@@ -1,4 +1,5 @@
-/* ESP32-S3-DevKitC: the modem on uart1, GPIO17 (TX) and GPIO18 (RX). */
+/* ESP32-S3-DevKitC: the modem on uart1, GPIO17 (TX) and GPIO18 (RX), with
+ * its control lines on GPIO6 (P_EN), GPIO4 (I_EN) and GPIO5 (I_BTD). */
 &pinctrl {
 	uart1_rb9704: uart1_rb9704 {
 		group1 {
@@ -20,5 +21,8 @@
 
 	rockblock {
 		compatible = "rock7,rockblock-9704";
+		power-gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;		/* P_EN */
+		iridium-enable-gpios = <&gpio0 4 GPIO_ACTIVE_HIGH>;	/* I_EN */
+		booted-gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>;		/* I_BTD */
 	};
 };

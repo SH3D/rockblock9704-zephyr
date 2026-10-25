@@ -82,6 +82,68 @@ round:
 The ESP32-S3 sits in its ROM loader after `west flash` until it is reset;
 toggle RTS on its USB port, or press reset, before the tests.
 
+## Out of doors: the shell over WiFi
+
+A real modem needs the sky, and the sky is rarely where the USB cable
+reaches. `samples/shell/overlay-wifi.conf` puts the same shell on telnet,
+on any ESP32 board, so the board needs only power:
+
+```sh
+west build -b stamp_c3 samples/shell -- -DEXTRA_CONF_FILE=overlay-wifi.conf
+west flash
+```
+
+Once, on the USB console, store the network; it is kept in flash:
+
+```
+wifi cred add -s "<SSID>" -k 1 -p "<password>"
+```
+
+At every boot after, the board joins it, logs `address 192.168.1.50:
+telnet 192.168.1.50`, and rejoins after a drop. A network added after boot
+is joined within 30 s. `wifi cred list` and `wifi cred delete <SSID>` look
+after the stored list; `net iface` shows the address again.
+
+```sh
+telnet 192.168.1.50
+rb9704 begin
+rb9704 spy on
+rb9704 info
+```
+
+Telnet has no password and no encryption, and `rb9704 send` costs
+airtime: use it on a network you trust.
+
+The Linux `telnet` client stays in line mode, where the up arrow and line
+editing do nothing: `Ctrl-]` then `mode character` fixes it, or connect
+with `socat -,rawer,escape=0x1d TCP:<address>:23`.
+
+On the M5Stamp-C3 the board's RGB LED shows the modem's state and its
+button begins and ends it; `boards/stamp_c3.md` has the table, the pins
+and the WiFi commands.
+
+### Wiring
+
+The board overlays for the M5Stamp-C3, ESP32-S3-DevKitC, ESP32 DevKitC
+and NUCLEO-U575ZI-Q wire all three control lines, so `rb9704 begin`
+powers the modem up in order and waits for it to say it has booted.
+
+| 9704 | M5Stamp-C3 | ESP32-S3-DevKitC | ESP32 DevKitC | NUCLEO-U575ZI-Q |
+| --- | --- | --- | --- | --- |
+| RX (board TX) | GPIO4 | GPIO17 | GPIO17 | PD8 |
+| TX (board RX) | GPIO5 | GPIO18 | GPIO16 | PD9 |
+| P_EN | GPIO10 | GPIO6 | GPIO27 | PF15 (D2) |
+| I_EN | GPIO6 | GPIO4 | GPIO25 | PF14 (D4) |
+| I_BTD | GPIO7 | GPIO5 | GPIO26 | PF13 (D7) |
+| GND | GND | GND | GND | GND |
+
+The modem's supply is its own, at the voltage and peak current Ground
+Control's manual gives, not the board's 3.3 V regulator. With `booted-gpios` in the overlay,
+`rb9704 begin` waits up to 30 s for I_BTD. A fake modem on a USB-serial
+adapter in place of the 9704 has no I_BTD, so tie the board's I_BTD pin
+to 3.3 V for those runs, or build with the rig overlays, which have no
+control lines.
+
 ## What has passed
 
 On 2026-10-09, Zephyr v4.4.0, Ground Control's library v1.0.1, the
@@ -96,5 +158,6 @@ binding 1.0.2:
 | a real 9704 (firmware v1.5.14), binding and native_sim, free checks | 2 | all pass |
 
 Not yet: a message through a real modem and satellite, which costs
-airtime and needs the sky (`CLOUDLOOP.md`, "The order to test in"), and
-the power pins on a board that has them wired.
+airtime and needs the sky (`CLOUDLOOP.md`, "The order to test in"), the
+power pins on a board that has them wired, and the shell over WiFi on a
+board.

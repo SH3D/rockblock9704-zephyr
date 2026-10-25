@@ -18,6 +18,13 @@ projects that send data home by satellite:
 [OGLAS](https://oglas.au/), a fleet of LoRa sensors, repeaters and hubs.
 Both run it, and neither is needed to use it.
 
+The source lives at
+[gitea.sh3d.com.au/Sh3d/rockblock9704-zephyr](https://gitea.sh3d.com.au/Sh3d/rockblock9704-zephyr)
+and is mirrored to
+[github.com/SH3D/rockblock9704-zephyr](https://github.com/SH3D/rockblock9704-zephyr).
+Open issues and pull requests on the GitHub mirror; the Gitea instance does
+not allow public sign-ups.
+
 ## Ground Control's library
 
 This module does not reimplement or fork the protocol. Ground Control's
@@ -169,10 +176,23 @@ real 9704 from Python and from `native_sim`.
 
 ## Boards
 
-Any board with a free UART. The sample has overlays for `native_sim`,
-NUCLEO-U575ZI-Q, Seeed XIAO ESP32S3, ESP32-S3-DevKitC, ESP32 DevKitC and
-LilyGO T3-S3 (an out-of-tree board in OGLAST2: build with its
-`-DBOARD_ROOT`). It has run on the first three; all six build.
+Any board with a free UART, on any architecture Zephyr runs on. The
+library is portable C and the module has nothing tied to one CPU. The
+sample has overlays for:
+
+| Board | CPU | Run on |
+| --- | --- | --- |
+| `native_sim` | the host (x86-64) | yes |
+| NUCLEO-U575ZI-Q | STM32U5, Arm Cortex-M33 | yes |
+| Seeed XIAO ESP32S3 | ESP32-S3, Xtensa | yes |
+| M5Stamp-C3 | ESP32-C3, RISC-V | WiFi and telnet so far, not yet the modem; `docs/boards/stamp_c3.md` |
+| ESP32-S3-DevKitC | ESP32-S3, Xtensa | builds |
+| ESP32 DevKitC | ESP32, Xtensa | builds |
+| LilyGO T3-S3 | ESP32-S3, Xtensa | builds; an out-of-tree board in OGLAST2, with its `-DBOARD_ROOT` |
+
+On an ESP32, `-DEXTRA_CONF_FILE=overlay-wifi.conf` puts the shell on
+telnet as well, for a board out under the sky with no USB
+(`docs/TESTING.md`).
 
 ## Layout
 
@@ -187,6 +207,7 @@ python/                                      rb9704, rb9704-fake, the tests
 docs/JSPR.md                                 the protocol as the library speaks it
 docs/CLOUDLOOP.md                            account to first message
 docs/TESTING.md                              the tests and how to run them
+docs/boards/                                 notes for one board each: pins, setup
 west.yml                                     the pins
 ```
 

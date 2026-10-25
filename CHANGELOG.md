@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- The shell sample over WiFi: `overlay-wifi.conf` puts the shell on
+  telnet on any ESP32, joining the network `wifi cred add` stored in
+  flash at boot and rejoining it after a drop.
+- The shell sample on the M5Stamp-C3 (ESP32-C3, RISC-V): the modem on
+  `uart1`, GPIO4 and GPIO5. Its RGB LED shows the modem's state and its
+  button begins, asks for the signal and ends. `docs/boards/stamp_c3.md`
+  has its pins, the WiFi commands and the LED's colours.
+- The sample's overlays for the M5Stamp-C3, ESP32-S3-DevKitC, ESP32
+  DevKitC and NUCLEO-U575ZI-Q wire P_EN, I_EN and I_BTD; the wiring table
+  is in `docs/TESTING.md`.
 - `rb9704_cancel()` and `rb9704 cancel`: ask the modem to abandon the
   message in flight; `mo_done` then reports `-ECANCELED`. The status
   snapshot carries the in-flight message's id and start time. The fake

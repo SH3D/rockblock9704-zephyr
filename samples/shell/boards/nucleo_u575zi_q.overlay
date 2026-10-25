@@ -1,6 +1,9 @@
-/* NUCLEO-U575ZI-Q: the modem on USART3, PD8 (TX) and PD9 (RX).
+/* NUCLEO-U575ZI-Q: the modem on USART3, PD8 (TX) and PD9 (RX), with its
+ * control lines on the Arduino header: D2, PF15 (P_EN); D4, PF14 (I_EN);
+ * D7, PF13 (I_BTD). PB0 would match the README's example, but the board
+ * gives it to adc4.
  *
- * On this board those pins share solder bridges with the ST-LINK's virtual
+ * On this board PD8 and PD9 share solder bridges with the ST-LINK's virtual
  * COM port; check UM2861 before wiring. To test without a modem, the fake
  * modem (python/rb9704tools/fakemodem.py) on a 3.3 V USB-serial adapter
  * wired to the same pins stands in for it. */
@@ -12,5 +15,8 @@
 
 	rockblock {
 		compatible = "rock7,rockblock-9704";
+		power-gpios = <&gpiof 15 GPIO_ACTIVE_HIGH>;		/* P_EN */
+		iridium-enable-gpios = <&gpiof 14 GPIO_ACTIVE_HIGH>;	/* I_EN */
+		booted-gpios = <&gpiof 13 GPIO_ACTIVE_HIGH>;		/* I_BTD */
 	};
 };

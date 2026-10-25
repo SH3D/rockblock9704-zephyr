@@ -1,5 +1,6 @@
 /* ESP32 DevKitC (the original ESP32): the modem on uart2, GPIO17 (TX) and
- * GPIO16 (RX). The console stays on uart0 through the board's USB bridge.
+ * GPIO16 (RX), with its control lines on GPIO27 (P_EN), GPIO25 (I_EN) and
+ * GPIO26 (I_BTD). The console stays on uart0 through the board's USB bridge.
  * On WROVER modules GPIO16 and GPIO17 belong to the PSRAM: use a WROOM
  * module, or move uart2's pins here. */
 &uart2 {
@@ -8,5 +9,8 @@
 
 	rockblock {
 		compatible = "rock7,rockblock-9704";
+		power-gpios = <&gpio0 27 GPIO_ACTIVE_HIGH>;		/* P_EN */
+		iridium-enable-gpios = <&gpio0 25 GPIO_ACTIVE_HIGH>;	/* I_EN */
+		booted-gpios = <&gpio0 26 GPIO_ACTIVE_HIGH>;		/* I_BTD */
 	};
 };

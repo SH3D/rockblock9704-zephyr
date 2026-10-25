@@ -1,0 +1,74 @@
+/* M5Stamp-C3: the modem on uart1, GPIO4 (TX) and GPIO5 (RX), with its
+ * three control lines on GPIO10 (P_EN), GPIO6 (I_EN) and GPIO7 (I_BTD). The
+ * console stays on uart0 through the board's USB bridge; with
+ * overlay-wifi.conf the shell is on telnet as well, for a board with power
+ * and no USB.
+ *
+ * The board's RGB LED, an SK6812 on GPIO2, is driven by spi2 with MOSI
+ * alone on that pin (src/indicator.c); the board's own spi2 pins put SCLK
+ * on GPIO4, the modem's TX. The button on GPIO3 is the board's sw0.
+ *
+ * Kept clear: GPIO8 and 9 (strapping, and the I2C), GPIO18 and 19 (USB),
+ * GPIO20 and 21 (the console).
+ *
+ * docs/boards/stamp_c3.md has the wiring, the WiFi set-up and the LED. */
+
+#include <zephyr/dt-bindings/led/led.h>
+
+&pinctrl {
+	spim2_led: spim2_led {
+		group1 {
+			pinmux = <SPIM2_MOSI_GPIO2>;
+			output-low;
+		};
+	};
+
+	uart1_rb9704: uart1_rb9704 {
+		group1 {
+			pinmux = <UART1_TX_GPIO4>;
+			output-high;
+		};
+		group2 {
+			pinmux = <UART1_RX_GPIO5>;
+			bias-pull-up;
+		};
+	};
+};
+
+/ {
+	aliases {
+		led-strip = &led_strip;
+	};
+};
+
+&spi2 {
+	pinctrl-0 = <&spim2_led>;
+	pinctrl-names = "default";
+	/* The SK6812 reads a high idle line as data. */
+	line-idle-low;
+
+	led_strip: ws2812@0 {
+		compatible = "worldsemi,ws2812-spi";
+		reg = <0>;
+		spi-max-frequency = <6400000>;
+		chain-length = <1>;
+		spi-cpha;
+		spi-one-frame = <0xf0>;		/* 625 ns high, 625 ns low */
+		spi-zero-frame = <0xc0>;	/* 312.5 ns high, 937.5 ns low */
+		color-mapping = <LED_COLOR_ID_GREEN LED_COLOR_ID_RED LED_COLOR_ID_BLUE>;
+	};
+};
+
+&uart1 {
+	pinctrl-0 = <&uart1_rb9704>;
+	pinctrl-names = "default";
+	current-speed = <230400>;
+	status = "okay";
+
+	rockblock {
+		compatible = "rock7,rockblock-9704";
+		power-gpios = <&gpio0 10 GPIO_ACTIVE_HIGH>;		/* P_EN */
+		iridium-enable-gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;	/* I_EN */
+		booted-gpios = <&gpio0 7 GPIO_ACTIVE_HIGH>;		/* I_BTD */
+	};
+};
