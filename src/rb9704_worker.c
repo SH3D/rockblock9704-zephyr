@@ -609,6 +609,9 @@ static void worker(void *a, void *b, void *c)
 		LOG_ERR("power pins not ready");
 	}
 	k_mutex_unlock(&rb9704_st_lock);
+	if (rb9704_serial_start() != 0) {
+		LOG_ERR("modem UART not ready");
+	}
 
 	for (;;) {
 		uint32_t ev = k_event_wait(&rb9704_ev, EV_REQ | EV_RX, false, K_FOREVER);

@@ -62,11 +62,19 @@ The library's source shows several things a caller has to work around;
   asks the modem to abandon it. `rbBegin` empties the queue but not the
   count of it, which would make every send after a stuck one queue
   without transmitting; `rb9704_begin` zeroes the count.
+- **A line with no status code reads past the library's buffer**, and on
+  a board it crashed. A modem talks before `rb9704_begin` opens the
+  library: its boot lines, once its power pins bring it up. The module
+  listens on the UART from boot and throws those bytes away, so a small
+  hardware FIFO never overflows into fragments of old lines, and when the
+  library opens part-way through a line the rest of that line is thrown
+  away too.
 
 Others are for upstream to fix, and are listed in `docs/JSPR.md` for that:
 `setState` waits for a misspelt target, a line with no status code reads
-past its buffer, MT segment data is cut at 1446 characters, and the
-Python binding never releases the GIL.
+past its buffer (the module keeps the causes it knows of away from it),
+MT segment data is cut at 1446 characters, and the Python binding never
+releases the GIL.
 
 ## Using it
 

@@ -29,6 +29,9 @@ Control is one command per line on stdin, events one per line on stdout:
     mo-release               send the withheld final status
     segment <n>              ask for MO segments of n bytes (default 1446)
     state <state>            the operationalState from now on
+    raw <text>               write text as it is, \r for CR: a line's
+                             tail, junk, a line cut short
+    before <text>            write text just before the next reply
     quit
 
     READY <port>
@@ -95,6 +98,7 @@ class FakeModem:
         self.mo_refuse = False
         self.mo_hold = False    # the next MO's final status waits for mo-release
         self.held = None        # (topic, id, status) withheld
+        self.before = b""       # written ahead of the next reply
         self.imei = "300434030000000"
         self.serial = "123456"
         self.iccid = "8988169712345678901"
@@ -123,6 +127,9 @@ class FakeModem:
 
     def request(self, line):
         self.events("RX " + line)
+        if self.before:
+            self.write(self.before)
+            self.before = b""
         parts = line.split(" ", 2)
         if len(parts) < 2:
             return
@@ -324,6 +331,15 @@ class FakeModem:
             self.segment = max(1, min(MO_SEGMENT_MAX, int(w[1])))
         elif cmd == "state":
             self.state = w[1]
+        elif cmd in ("raw", "before"):
+            text = line.split(" ", 1)[1] if " " in line else ""
+            data = text.encode().decode("unicode_escape").encode("latin-1")
+            with self.lock:
+                if cmd == "raw":
+                    self.write(data)
+                else:
+                    self.before = data
+            self.events("%s %s" % (cmd.upper(), text))
         elif cmd == "quit":
             return False
         elif cmd:

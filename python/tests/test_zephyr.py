@@ -5,6 +5,7 @@ Zephyr, through the shell sample, against the fake modem: on native_sim
 with --zephyr-exe, on a board with --board-console and --board-modem.
 """
 
+import time
 import zlib
 
 import pytest
@@ -100,6 +101,37 @@ def test_cancel_a_send_the_modem_sits_on(zephyr):
     c.out.expect(r"send: ok")
     f.out.expect(r"^MO 244 \d+ ")
     c.out.expect(r"result 0")
+
+
+def test_a_boot_burst_while_closed(zephyr):
+    """A modem powered up before begin talks to nobody: its boot lines,
+    over 600 bytes here, end part-way through one, finished just before
+    the first reply. On the M5Stamp-C3 such a burst overflowed the UART's
+    128-byte FIFO while the module was not listening, and begin then heard
+    only repeated fragments of old lines; given one, the library read past
+    its buffer and the board crashed (2026-10-25). The module now empties
+    the FIFO from boot and skips the rest of a line it opened in.
+
+    On a board through the rig this is that overflow. native_sim has no
+    FIFO to overflow: there it checks that the burst does no harm."""
+    c, f = zephyr
+    boot = ('\\x11\\x11299 bootInfo {"image_type":"production","version":{"major":1,'
+            '"minor":5,"patch":14,"build_info":"SX-250613-A3E9C3E3-P1-P3142-1194848-'
+            '12516979"},"boot_source":"primary"}\\r')
+    lines = (boot
+             + '299 simStatus {"card_present":true,"sim_connected":true,'
+               '"iccid":"8988169712345678901"}\\r'
+             + '299 operationalState {"state":"inactive","reason":0}\\r' * 4
+             + '299 constellationState {"constellation_visible":false,"signal_bars":0}\\r' * 2
+             + '299 bootInfo {"image_type":"prod')
+    f.cmd("raw " + lines)
+    f.out.expect(r"^RAW ")
+    time.sleep(0.5)
+    f.cmd('before uction"}\\r')
+    f.out.expect(r"^BEFORE ")
+    begin(zephyr)
+    c.sh("rb9704 info")
+    c.out.expect(r"imei\s+300434030000000")
 
 
 def test_topic_below_64_is_refused_here(zephyr):

@@ -15,6 +15,8 @@
 #define RB9704_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(rock7_rockblock_9704)
 
 /* rb9704_serial.c */
+/* The receive interrupt, on from boot (rb9704_serial.c says why). */
+int rb9704_serial_start(void);
 int rb9704_serial_available(void);
 uint32_t rb9704_serial_dropped(void);
 void rb9704_serial_spy(bool on);

@@ -172,5 +172,27 @@ has no I_BTD: tie GPIO7 to 3.3 V for those runs.
 | WiFi, the stored network, telnet | works (2026-10-24) |
 | a real 9704 on TX and RX, powered from the Stamp's 5V: `begin`, `info`, `signal` | works (2026-10-25) |
 | the same with the 9704's USB-C plugged in | fails: the FTDI holds the modem's RX |
-| the LED and button | built, not yet run |
-| P_EN, I_EN, I_BTD | not yet wired |
+| P_EN, I_EN, I_BTD: `begin` powers it up in about 2 s, `power off`, `begin` again | works (2026-10-25), 8 of 8 cycles, and 12 of 12 with up to 5 s between `power on` and `begin` |
+| under open sky: the constellation visible and 3 to 5 bars within seconds of `begin` | works (2026-10-25) |
+| staying up while active, on the Stamp's 5V | fails: see below |
+| provisioning, and a message sent | not yet |
+| the LED and button | the button's short press works; the busy colour reads orange, not white, at this brightness |
+
+### Open: the modem stops answering after a few minutes
+
+On 2026-10-25, powered from the Stamp's 5V, the modem stopped answering
+2 to 5 minutes after each `begin`, four times: once indoors, three times
+under open sky. Every request then gets `-EIO`, its signal reports stop,
+and it stays silent until the control lines are cycled; left alone with
+P_EN and I_EN high it was still silent after 9 minutes. Indoors the RDY
+LED went off when it happened.
+
+The likely cause is the supply: the 9704's input going below the 4.0 V
+it needs while it charges, after the Stamp's USB-C, its 5V pin and the
+leads. That is not yet measured. What would settle it: the voltage at
+the 9704's supply pin over those minutes; the 9704 on a 5 V supply of
+its own, GND joined to the Stamp's; and the 9704 on its own USB-C from a
+laptop for 30 minutes, which has not been tried for longer than a few
+seconds either. Whether the modem goes quiet on its serial port while it
+provisions is also not known, and a test that power-cycles it on
+silence would cut that short.

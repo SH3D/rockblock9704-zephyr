@@ -723,6 +723,10 @@ Everything else is ignored.
    the end of the line through the zeroed buffer, then `memmove` with a
    negative length cast to `size_t` (`src/jspr.c:89-113`). Expect a crash.
    Never send banners, prompts or blank-ish lines of 9 bytes or more.
+   On an M5Stamp-C3 it did crash (2026-10-25), when the UART's FIFO had
+   overflowed and handed over fragments of old lines. rockblock9704-zephyr
+   now keeps the FIFO empty from boot and gives the library no line it
+   opened in the middle of (`src/rb9704_serial.c`).
 3. **`resultCodeIndexStart` is not reset** after a line is discarded for the
    wrong target (`src/jspr.c:48,133-136`): if that line had leading junk,
    the next line is read from the same offset. Do not send leading junk.

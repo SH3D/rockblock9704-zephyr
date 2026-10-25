@@ -1,5 +1,22 @@
 # Changes
 
+## Unreleased
+
+- The modem's UART is listened to from boot, not only while the library
+  is open. With the power pins wired, `rb9704 power on` or a modem left
+  talking after `rb9704 end` sent its boot lines to nobody; they
+  overflowed the M5Stamp-C3's 128-byte UART FIFO, after which `begin`
+  heard only repeated fragments of old lines and failed with `-EIO` (1 in
+  6 after a power cycle, none at all after a pause), and a second `begin`
+  crashed the board in the library's line parser. Bytes heard while the
+  library is closed are now thrown away, and when it opens part-way
+  through a line the rest of that line is too. On the Stamp: 8 of 8 power
+  cycles, and 12 of 12 with 0 to 5 s between power on and `begin`.
+- The fake modem's `raw` and `before` write any bytes, now or just ahead
+  of its next reply. `test_a_boot_burst_while_closed` sends a 680-byte
+  boot burst before `begin`: the overflow above on a board through the
+  rig, a check that it does no harm on native_sim.
+
 ## 0.2.0, 2026-10-25
 
 - The shell sample over WiFi: `overlay-wifi.conf` puts the shell on
