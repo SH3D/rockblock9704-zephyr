@@ -181,7 +181,7 @@ has no I_BTD: tie GPIO7 to 3.3 V for those runs.
 | under open sky: the constellation visible and 3 to 5 bars within seconds of `begin` | works (2026-10-25) |
 | staying up while active | failed with P_EN driven the wrong way: see below; with P_EN unconnected, up and answering throughout (2026-10-25) |
 | provisioning, and a message sent | works (2026-10-25): provisioned with 244 and 313 to 317, and "Stamp-C3 says hi", 16 bytes on topic 244, sent in 10 s with 3 to 4 bars and received in Cloudloop |
-| the reworked control pins outside: I_EN and I_BTD in Ground Control's sequence, P_EN wired and `GPIO_ACTIVE_LOW` | works (2026-10-25): up over 6 minutes under the sky, past every drop with P_EN the wrong way, and "Stamp-C3 P_EN low", 17 bytes on topic 244, sent in 6 s and received in Cloudloop |
+| the reworked control pins outside: I_EN and I_BTD in Ground Control's sequence, P_EN wired and `GPIO_ACTIVE_LOW` | works (2026-10-25): "Stamp-C3 P_EN low", 17 bytes on topic 244, sent in 6 s and received in Cloudloop; left out overnight, the modem was up and answering for about 11 h 54 min with no drop and the Stamp did not reboot, where P_EN the wrong way stopped it within 5 minutes every time |
 | an MT message down to the board | not yet |
 | the LED and button | the button's short press works; the busy colour reads orange, not white, at this brightness |
 
@@ -200,8 +200,9 @@ The TX and RX test without control lines, where the pull-down keeps the
 charger on, did not stop. With P_EN taken off the header, the same
 firmware stayed up and sent its first message. The overlay now has
 `GPIO_ACTIVE_LOW`, and the module releases P_EN while the modem is off;
-with P_EN wired again on that firmware, the modem stayed up past every
-earlier drop and sent a second message.
+with P_EN wired again on that firmware, the modem sent a second message
+and stayed up through the night, about 11 h 54 min from 22:41 on
+2026-10-25 to 10:35 the next morning, satellites seen throughout.
 
 The module also now shuts down as the page sets out: I_EN low, then wait
 for I_BTD to go low before anything else, and the same wait on the way

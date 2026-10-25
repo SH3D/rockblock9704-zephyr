@@ -1,5 +1,12 @@
 # Changes
 
+## Unreleased
+
+- Docs: the M5Stamp-C3 left out overnight on 0.3.0, P_EN wired and
+  active low: the modem up and answering for about 11 h 54 min with no
+  drop, and the Stamp did not reboot. P_EN driven the wrong way had
+  stopped it within 5 minutes every time.
+
 ## 0.3.0, 2026-10-25
 
 - Provisioning and MO messages to Cloudloop work: the M5Stamp-C3 under

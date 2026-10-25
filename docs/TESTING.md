@@ -176,8 +176,9 @@ with topics 244 and 313 to 317, and one message, 16 bytes on topic 244,
 sent from the Stamp's shell over telnet and received in Cloudloop. The
 first message through a real modem and satellite.
 
-Then the reworked control pins outside, P_EN wired and active low: up
-over 6 minutes, past every earlier drop, and a second message, 17 bytes
-on topic 244, received in Cloudloop.
+Then the reworked control pins outside, P_EN wired and active low: a
+second message, 17 bytes on topic 244, received in Cloudloop, and the
+modem left running overnight, up and answering for about 11 h 54 min with
+no drop and no reboot of the Stamp.
 
 Not yet: an MT message down to the board.

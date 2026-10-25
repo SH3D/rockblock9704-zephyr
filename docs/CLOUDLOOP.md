@@ -219,5 +219,8 @@ by `rb9704 send` in the Zephyr shell (`boards/stamp_c3.md`):
   and the payload in hex (`5374616D702D433320505F454E206C6F77`). The
   CRC the library adds on the way out is checked and gone.
 
+The modem then stayed begun overnight, about 11 h 54 min, still
+provisioned and answering in the morning.
+
 Not yet: MT, a session, and this command line's own `provision` and
 `send` against a real modem.
