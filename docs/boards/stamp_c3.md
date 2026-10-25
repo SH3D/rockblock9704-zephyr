@@ -20,19 +20,36 @@ The overlay is `samples/shell/boards/stamp_c3.overlay`, with
 | GPIO6 | I_EN | the modem enable, 10 ms after P_EN |
 | GPIO7 | I_BTD | `rb9704 begin` waits up to 30 s for it to go high |
 | GND | GND | |
+| 5V | the 9704's supply in | the Stamp's USB-C supply, passed through |
 | GPIO2 | the RGB LED, an SK6812 | on the board |
 | GPIO3 | the button | on the board |
 | GPIO20, GPIO21 | `uart0`, the console | through the USB-C bridge |
 
 Kept clear: GPIO8 and GPIO9 (strapping pins, and the board's I2C) and
-GPIO18 and GPIO19 (USB). The modem's supply is its own, at the voltage
-and peak current Ground Control's manual gives, not the Stamp's 3.3 V.
+GPIO18 and GPIO19 (USB).
+
+## Power: the Stamp's 5V, and the 9704's USB-C unplugged
+
+The 9704's header UART and its USB-C port are the same serial lines. With
+USB-C plugged in, the 9704's FTDI chip is powered and drives the modem's
+RX, and a board on the header cannot talk over it: the modem answers
+nobody, the computer on USB included. Its TX still reaches the header, so
+a board can listen alongside USB, but not send.
+
+So the 9704 is powered from the header with its USB-C unplugged. The
+Stamp's 5V pin does it: the modem draws a few hundred mA, and its
+supercapacitor charges slowly, about 40 s to the green RDY LED. Both
+boards then run from the Stamp's USB-C; on a laptop's 500 mA port a
+Stamp that resets by itself while the 9704 charges is the supply sagging,
+and a charger or a powered hub gives the margin.
 
 The control lines are optional. With fewer wired, take the matching lines
 out of the overlay's `rockblock` node, or `rb9704 begin` waits on a pin
 that is not there:
 
-- None: four wires, and the modem is taken to be powered.
+- None: four wires, and the modem is taken to be powered. No edit
+  needed: `-DEXTRA_DTC_OVERLAY_FILE=no-control-pins.overlay` takes all
+  three out at build time (below).
 - P_EN only: `rb9704 power off` and `power on` over telnet restart a
   modem that has hung, with nobody walking out to it. The one most worth
   wiring.
@@ -52,6 +69,16 @@ west flash
 
 Without `-DEXTRA_CONF_FILE=overlay-wifi.conf` the shell is on the USB
 console only, and the LED and button work the same.
+
+TX and RX only, no control lines:
+
+```sh
+west build -b stamp_c3 samples/shell -- -DEXTRA_CONF_FILE=overlay-wifi.conf \
+    -DEXTRA_DTC_OVERLAY_FILE=no-control-pins.overlay
+```
+
+With no P_EN, the long press on the button ends without turning anything
+off, and `rb9704 power` answers `-ENOTSUP`.
 
 ## WiFi
 
@@ -143,5 +170,7 @@ has no I_BTD: tie GPIO7 to 3.3 V for those runs.
 | | |
 | --- | --- |
 | WiFi, the stored network, telnet | works (2026-10-24) |
+| a real 9704 on TX and RX, powered from the Stamp's 5V: `begin`, `info`, `signal` | works (2026-10-25) |
+| the same with the 9704's USB-C plugged in | fails: the FTDI holds the modem's RX |
 | the LED and button | built, not yet run |
-| a real 9704 on this board | not yet |
+| P_EN, I_EN, I_BTD | not yet wired |

@@ -76,7 +76,7 @@ library, pinned, at the path the module looks in, and nothing else:
 ```yaml
     - name: rockblock9704-zephyr
       url: https://github.com/SH3D/rockblock9704-zephyr
-      revision: v0.1.0
+      revision: v0.2.0
       path: modules/lib/rockblock9704-zephyr
       import:
         name-allowlist:
@@ -99,6 +99,15 @@ without them the modem is taken to be powered:
 	};
 };
 ```
+
+**USB-C and the header are the same serial port.** The 9704's USB-C goes
+through an FTDI chip to the modem's UART, on the same lines as the
+header's TX and RX. With the USB-C cable plugged in, that chip drives the
+modem's RX, and a board on the header can hear the modem but not reach
+it: `rb9704_begin` fails with `-EIO`, and the computer on USB gets no
+answer either. Unplug the USB-C and power the 9704 from the header; a
+board's 5 V pin will do, as the modem draws a few hundred mA
+(`docs/boards/stamp_c3.md`).
 
 `CONFIG_RB9704` follows the node. Then `<rb9704/rb9704.h>`:
 
@@ -185,7 +194,7 @@ sample has overlays for:
 | `native_sim` | the host (x86-64) | yes |
 | NUCLEO-U575ZI-Q | STM32U5, Arm Cortex-M33 | yes |
 | Seeed XIAO ESP32S3 | ESP32-S3, Xtensa | yes |
-| M5Stamp-C3 | ESP32-C3, RISC-V | WiFi and telnet so far, not yet the modem; `docs/boards/stamp_c3.md` |
+| M5Stamp-C3 | ESP32-C3, RISC-V | yes, a real 9704 on TX and RX; `docs/boards/stamp_c3.md` |
 | ESP32-S3-DevKitC | ESP32-S3, Xtensa | builds |
 | ESP32 DevKitC | ESP32, Xtensa | builds |
 | LilyGO T3-S3 | ESP32-S3, Xtensa | builds; an out-of-tree board in OGLAST2, with its `-DBOARD_ROOT` |

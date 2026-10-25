@@ -13,7 +13,7 @@
 	current-speed = <230400>;
 	status = "okay";
 
-	rockblock {
+	rb9704: rockblock {
 		compatible = "rock7,rockblock-9704";
 		power-gpios = <&gpiof 15 GPIO_ACTIVE_HIGH>;		/* P_EN */
 		iridium-enable-gpios = <&gpiof 14 GPIO_ACTIVE_HIGH>;	/* I_EN */

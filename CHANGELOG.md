@@ -1,6 +1,6 @@
 # Changes
 
-## Unreleased
+## 0.2.0, 2026-10-25
 
 - The shell sample over WiFi: `overlay-wifi.conf` puts the shell on
   telnet on any ESP32, joining the network `wifi cred add` stored in
@@ -11,7 +11,14 @@
   has its pins, the WiFi commands and the LED's colours.
 - The sample's overlays for the M5Stamp-C3, ESP32-S3-DevKitC, ESP32
   DevKitC and NUCLEO-U575ZI-Q wire P_EN, I_EN and I_BTD; the wiring table
-  is in `docs/TESTING.md`.
+  is in `docs/TESTING.md`. `no-control-pins.overlay` takes them out at
+  build time, for a modem on TX and RX alone; the modem node is labelled
+  `rb9704` in every overlay so it can.
+- A real 9704 on a microcontroller for the first time: the M5Stamp-C3,
+  on TX and RX, powered from the Stamp's 5 V. The 9704's USB-C and its
+  header share the modem's UART, and with USB-C plugged in a board on the
+  header cannot reach the modem; the README, `docs/CLOUDLOOP.md` and
+  `docs/boards/stamp_c3.md` say so.
 - `rb9704_cancel()` and `rb9704 cancel`: ask the modem to abandon the
   message in flight; `mo_done` then reports `-ECANCELED`. The status
   snapshot carries the in-flight message's id and start time. The fake

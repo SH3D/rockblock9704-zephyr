@@ -8,7 +8,7 @@
 	current-speed = <230400>;
 	status = "okay";
 
-	rockblock {
+	rb9704: rockblock {
 		compatible = "rock7,rockblock-9704";
 	};
 };

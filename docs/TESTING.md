@@ -144,6 +144,10 @@ adapter in place of the 9704 has no I_BTD, so tie the board's I_BTD pin
 to 3.3 V for those runs, or build with the rig overlays, which have no
 control lines.
 
+For a modem on TX and RX alone, `samples/shell/no-control-pins.overlay`
+takes the three lines out of any board's overlay at build time:
+`-DEXTRA_DTC_OVERLAY_FILE=no-control-pins.overlay`.
+
 ## What has passed
 
 On 2026-10-09, Zephyr v4.4.0, Ground Control's library v1.0.1, the
@@ -157,7 +161,11 @@ binding 1.0.2:
 | NUCLEO-U575ZI-Q through the rig | 12 | all pass |
 | a real 9704 (firmware v1.5.14), binding and native_sim, free checks | 2 | all pass |
 
+On 2026-10-25, the M5Stamp-C3 (ESP32-C3, RISC-V) with the shell over
+WiFi, and a real 9704 on its header pins, TX and RX only, powered from
+the Stamp's 5V: `begin`, `info` and `signal` all answer, nothing dropped
+(`boards/stamp_c3.md`).
+
 Not yet: a message through a real modem and satellite, which costs
-airtime and needs the sky (`CLOUDLOOP.md`, "The order to test in"), the
-power pins on a board that has them wired, and the shell over WiFi on a
-board.
+airtime and needs the sky (`CLOUDLOOP.md`, "The order to test in"), and
+the power pins on a board that has them wired.

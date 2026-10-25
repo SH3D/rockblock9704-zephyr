@@ -18,7 +18,11 @@ have not been tried yet.
 - **Its USB-C port.** An FTDI FT234XD (USB id `0403:6015`) bridges it to
   the modem's UART, and the port also powers the board. It needs a port
   that supplies 500 mA at 4.0 to 5.3 V; an unpowered hub is not supported.
-  The supercapacitor takes about 40 s to charge from USB. LEDs: red PWR is
+  The supercapacitor takes about 40 s to charge from USB. The FTDI is on
+  the same UART lines as the 10-way header, so with USB-C plugged in a
+  microcontroller on the header can hear the modem but not reach it; a
+  board on the header powers the 9704 from the header, with USB-C
+  unplugged (`boards/stamp_c3.md`). LEDs: red PWR is
   input voltage present, green RDY is the modem powered and booted, blue
   XMT is transmitting.
 - **The library.** Ground Control's C library (MIT) is what this
@@ -184,6 +188,9 @@ version, SIM, operational state). In order of likelihood:
   blocks it. The `--udev` rule stops the first.
 - **Not in `dialout`.** `install.sh` checks; `sudo usermod -aG dialout
   $USER` and log in again.
+- **USB-C and the header at once.** A board on the header with the
+  USB-C cable plugged in: the FTDI drives the modem's RX, and neither side
+  gets an answer. Unplug one.
 - **Not booted.** No green RDY: the port gives too little current (a hub,
   a front-panel port), or the supercapacitor is still charging.
 - **Something odd.** `rb9704 jspr --setup 'GET hwInfo {}'
