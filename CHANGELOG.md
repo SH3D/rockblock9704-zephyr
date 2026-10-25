@@ -1,6 +1,31 @@
 # Changes
 
-## Unreleased
+## 0.3.0, 2026-10-25
+
+- Provisioning and MO messages to Cloudloop work: the M5Stamp-C3 under
+  open sky, provisioned with topics 244 and 313 to 317, sent two
+  messages on topic 244 from its shell over WiFi, 16 and 17 bytes, and
+  both arrived in Cloudloop whole. The second ran on the reworked
+  control pins below, with P_EN wired and active low, and the modem
+  stayed up past every earlier drop. `docs/CLOUDLOOP.md`, "What has
+  run", records how Cloudloop shows a message.
+
+- P_EN is active low. On the RockBLOCK it is the supercapacitor charge
+  enable ("Cap Charge Enable Signal (ACTIVE LOW)", header pin 6), and the
+  sample's overlays had it `GPIO_ACTIVE_HIGH`, so every `begin` switched
+  the charger off: the modem ran down and went silent 2 to 5 minutes
+  later, as it did on the M5Stamp-C3 indoors and out. The overlays, the
+  README and the binding now say `GPIO_ACTIVE_LOW`, and the module drives
+  P_EN only while the modem runs, releasing it to an input while it is
+  off, where the board's pull-down keeps the charger on.
+- The control pins follow Ground Control's start-up and shutdown
+  sequence. I_EN starts and stops the modem, and is what makes the pins
+  present (`CONFIG_RB9704_POWER` follows `iridium-enable-gpios`); P_EN
+  and I_BTD are optional beside it. Shutdown drives I_EN low and waits
+  for I_BTD to go low before anything else, as start-up waits for it to
+  go high, so I_EN never moves back before I_BTD has followed, which the
+  page warns may damage the module. Before, `power off` dropped the pins
+  and returned at once.
 
 - The modem's UART is listened to from boot, not only while the library
   is open. With the power pins wired, `rb9704 power on` or a modem left

@@ -30,12 +30,13 @@ DT_COMPAT_ROCK7_ROCKBLOCK_9704 := rock7,rockblock-9704
 
 config RB9704_POWER
 	bool "Drive the power pins from devicetree"
-	default y if $(dt_compat_any_has_prop,$(DT_COMPAT_ROCK7_ROCKBLOCK_9704),power-gpios)
+	default y if $(dt_compat_any_has_prop,$(DT_COMPAT_ROCK7_ROCKBLOCK_9704),iridium-enable-gpios)
 	select GPIO
 	help
-	  P_EN, I_EN and I_BTD as the devicetree node gives them. Without
-	  them the modem is taken to be powered, as the board is with the pins
-	  left open.
+	  I_EN, I_BTD and P_EN as the devicetree node gives them, in Ground
+	  Control's start-up and shutdown sequence. I_EN is the one that
+	  switches the modem; without it the modem is taken to be powered, as
+	  the board is with the pins left open.
 
 config RB9704_WORKER_STACK_SIZE
 	int "Worker thread stack size"

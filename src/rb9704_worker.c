@@ -603,7 +603,7 @@ static void worker(void *a, void *b, void *c)
 	ARG_UNUSED(a); ARG_UNUSED(b); ARG_UNUSED(c);
 
 	k_mutex_lock(&rb9704_st_lock, K_FOREVER);
-	/* No pins: the board is powered whenever this runs. */
+	/* No I_EN: the board is powered whenever this runs. */
 	st.powered = !rb9704_power_present();
 	if (rb9704_power_present() && rb9704_power_init() != 0) {
 		LOG_ERR("power pins not ready");

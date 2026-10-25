@@ -7,7 +7,10 @@ description: |
   no AT mode. One per system: the library underneath keeps global state.
 
   The control pins are optional. With none, the modem is assumed powered and
-  enabled, which is how the board behaves with the pins left open.
+  enabled, which is how the board behaves with the pins left open: I_EN
+  has a pull-up and P_EN a pull-down. I_EN is what switches the modem, so
+  power control needs iridium-enable-gpios; booted-gpios and power-gpios
+  are each optional beside it.
 
 compatible: "rock7,rockblock-9704"
 
@@ -18,25 +21,32 @@ properties:
   power-gpios:
     type: phandle-array
     description: |
-      P_EN, the supply enable. Driven active to power the board.
+      P_EN, header pin 6: the supercapacitor charge enable. It is active
+      low on the board, so give GPIO_ACTIVE_LOW. Driven active (charging
+      on) while the modem runs, and released to an input while it is off,
+      where the board's pull-down keeps the charger on. Leaving it
+      unconnected is fine.
 
   iridium-enable-gpios:
     type: phandle-array
     description: |
-      I_EN, the modem enable. Driven active once the supply is up.
+      I_EN, header pin 3: starts and stops the modem. Driven high to
+      start it and low to stop it, and never moved back until I_BTD has
+      followed.
 
   booted-gpios:
     type: phandle-array
     description: |
-      I_BTD, the modem's booted signal. When present, power-up waits for it
-      instead of a fixed delay.
+      I_BTD, header pin 7: high once the modem has booted, low once it has
+      shut down. When present, start-up and shutdown wait for it instead
+      of a fixed delay.
 
   boot-delay-ms:
     type: int
     default: 4000
     description: |
-      How long to wait after enabling the modem before talking to it, when
-      there is no booted-gpios to wait on.
+      How long to wait after moving I_EN, either way, when there is no
+      booted-gpios to wait on.
 
 examples:
   - |
@@ -46,7 +56,7 @@ examples:
 
             modem: rockblock {
                     compatible = "rock7,rockblock-9704";
-                    power-gpios = <&gpiob 0 GPIO_ACTIVE_HIGH>;
+                    power-gpios = <&gpiob 0 GPIO_ACTIVE_LOW>;
                     iridium-enable-gpios = <&gpiob 1 GPIO_ACTIVE_HIGH>;
                     booted-gpios = <&gpiob 2 GPIO_ACTIVE_HIGH>;
             };

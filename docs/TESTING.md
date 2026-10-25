@@ -126,23 +126,28 @@ and the WiFi commands.
 
 The board overlays for the M5Stamp-C3, ESP32-S3-DevKitC, ESP32 DevKitC
 and NUCLEO-U575ZI-Q wire all three control lines, so `rb9704 begin`
-powers the modem up in order and waits for it to say it has booted.
+starts the modem through I_EN and waits for I_BTD to say it has booted,
+and `rb9704 power off` waits for I_BTD to say it has shut down.
 
-| 9704 | M5Stamp-C3 | ESP32-S3-DevKitC | ESP32 DevKitC | NUCLEO-U575ZI-Q |
+| 9704 header | M5Stamp-C3 | ESP32-S3-DevKitC | ESP32 DevKitC | NUCLEO-U575ZI-Q |
 | --- | --- | --- | --- | --- |
-| RX (board TX) | GPIO4 | GPIO17 | GPIO17 | PD8 |
-| TX (board RX) | GPIO5 | GPIO18 | GPIO16 | PD9 |
-| P_EN | GPIO10 | GPIO6 | GPIO27 | PF15 (D2) |
-| I_EN | GPIO6 | GPIO4 | GPIO25 | PF14 (D4) |
-| I_BTD | GPIO7 | GPIO5 | GPIO26 | PF13 (D7) |
-| GND | GND | GND | GND | GND |
+| 14, RXD (board TX) | GPIO4 | GPIO17 | GPIO17 | PD8 |
+| 13, TXD (board RX) | GPIO5 | GPIO18 | GPIO16 | PD9 |
+| 3, I_EN | GPIO6 | GPIO4 | GPIO25 | PF14 (D4) |
+| 7, I_BTD | GPIO7 | GPIO5 | GPIO26 | PF13 (D7) |
+| 6, P̅_E̅N̅, active low, optional | GPIO10 | GPIO6 | GPIO27 | PF15 (D2) |
+| 1, 4 or 10, GND | GND | GND | GND | GND |
 
-The modem's supply is its own, at the voltage and peak current Ground
-Control's manual gives, not the board's 3.3 V regulator. With `booted-gpios` in the overlay,
-`rb9704 begin` waits up to 30 s for I_BTD. A fake modem on a USB-serial
-adapter in place of the 9704 has no I_BTD, so tie the board's I_BTD pin
-to 3.3 V for those runs, or build with the rig overlays, which have no
-control lines.
+The modem's supply goes to V_IN+ and V_IN- (pins 15 and 16), 4.0 to
+5.3 V at up to 500 mA, not the board's 3.3 V regulator; V_BATT (pin 12)
+is for a lithium cell, never 5 V. P_EN is the supercapacitor charge
+enable and is active low: driven high it switches the charger off, and
+the modem runs down within minutes. Leaving it unconnected is fine.
+
+A fake modem on a USB-serial adapter in place of the 9704 has no I_BTD:
+build with `no-control-pins.overlay`, below, or with the rig overlays,
+which have no control lines. Tying I_BTD to 3.3 V gets `begin` going, but
+`power off` then waits 30 s for it to fall and fails.
 
 For a modem on TX and RX alone, `samples/shell/no-control-pins.overlay`
 takes the three lines out of any board's overlay at build time:
@@ -166,6 +171,13 @@ WiFi, and a real 9704 on its header pins, TX and RX only, powered from
 the Stamp's 5V: `begin`, `info` and `signal` all answer, nothing dropped
 (`boards/stamp_c3.md`).
 
-Not yet: a message through a real modem and satellite, which costs
-airtime and needs the sky (`CLOUDLOOP.md`, "The order to test in"), and
-the power pins on a board that has them wired.
+Later the same day, under open sky with P_EN unconnected: provisioned
+with topics 244 and 313 to 317, and one message, 16 bytes on topic 244,
+sent from the Stamp's shell over telnet and received in Cloudloop. The
+first message through a real modem and satellite.
+
+Then the reworked control pins outside, P_EN wired and active low: up
+over 6 minutes, past every earlier drop, and a second message, 17 bytes
+on topic 244, received in Cloudloop.
+
+Not yet: an MT message down to the board.

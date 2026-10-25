@@ -84,7 +84,7 @@ library, pinned, at the path the module looks in, and nothing else:
 ```yaml
     - name: rockblock9704-zephyr
       url: https://github.com/SH3D/rockblock9704-zephyr
-      revision: v0.2.0
+      revision: v0.3.0
       path: modules/lib/rockblock9704-zephyr
       import:
         name-allowlist:
@@ -92,7 +92,9 @@ library, pinned, at the path the module looks in, and nothing else:
 ```
 
 In the board overlay, a node on the modem's UART. The pins are optional;
-without them the modem is taken to be powered:
+without them the modem is taken to be powered. I_EN starts and stops the
+modem; P_EN is the supercapacitor charge enable and is active low, so
+`GPIO_ACTIVE_LOW`, and it can be left unconnected:
 
 ```dts
 &usart3 {
@@ -101,7 +103,7 @@ without them the modem is taken to be powered:
 
 	rockblock {
 		compatible = "rock7,rockblock-9704";
-		power-gpios = <&gpiob 0 GPIO_ACTIVE_HIGH>;          /* P_EN */
+		power-gpios = <&gpiob 0 GPIO_ACTIVE_LOW>;           /* P_EN, active low */
 		iridium-enable-gpios = <&gpiob 1 GPIO_ACTIVE_HIGH>; /* I_EN */
 		booted-gpios = <&gpiob 2 GPIO_ACTIVE_HIGH>;         /* I_BTD */
 	};
@@ -150,7 +152,7 @@ system: the library keeps global state.
 | `CONFIG_RB9704_WORKER_STACK_SIZE` | 8192 | measured: the library parks 1.5 kB on the stack in `rbPoll()` |
 | `CONFIG_RB9704_WORKER_PRIORITY` | 8 | |
 | `CONFIG_RB9704_RX_RING_SIZE` | 8192 | the library's longest JSPR line |
-| `CONFIG_RB9704_POWER` | with `power-gpios` | drive the pins |
+| `CONFIG_RB9704_POWER` | with `iridium-enable-gpios` | drive the pins |
 | `CONFIG_RB9704_SHELL` | with `CONFIG_SHELL` | `rb9704` on the shell |
 | `CONFIG_RB9704_UPSTREAM_DIR` | empty | where Ground Control's library is, if not where `west.yml` puts it |
 
@@ -202,7 +204,7 @@ sample has overlays for:
 | `native_sim` | the host (x86-64) | yes |
 | NUCLEO-U575ZI-Q | STM32U5, Arm Cortex-M33 | yes |
 | Seeed XIAO ESP32S3 | ESP32-S3, Xtensa | yes |
-| M5Stamp-C3 | ESP32-C3, RISC-V | yes, a real 9704 on TX and RX; `docs/boards/stamp_c3.md` |
+| M5Stamp-C3 | ESP32-C3, RISC-V | yes, a real 9704 under the sky: provisioned, a message sent to Cloudloop; `docs/boards/stamp_c3.md` |
 | ESP32-S3-DevKitC | ESP32-S3, Xtensa | builds |
 | ESP32 DevKitC | ESP32, Xtensa | builds |
 | LilyGO T3-S3 | ESP32-S3, Xtensa | builds; an out-of-tree board in OGLAST2, with its `-DBOARD_ROOT` |

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rockblock9704-tools"
-version = "0.2.0"
+version = "0.3.0"
 description = "Host tools for the RockBLOCK 9704: a command line for the modem and Cloudloop, and a fake modem for testing"
 readme = "README.md"
 license = "MIT"

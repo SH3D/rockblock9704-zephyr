@@ -12,23 +12,23 @@ The overlay is `samples/shell/boards/stamp_c3.overlay`, with
 
 ## Pins
 
-| Stamp-C3 | Signal | Notes |
+| Stamp-C3 | 9704 header | Notes |
 | --- | --- | --- |
-| GPIO4 | `uart1` TX → 9704 RX | 230400 8N1 |
-| GPIO5 | `uart1` RX ← 9704 TX | |
-| GPIO10 | P_EN | the supply; without it the module drives none of the three |
-| GPIO6 | I_EN | the modem enable, 10 ms after P_EN |
-| GPIO7 | I_BTD | `rb9704 begin` waits up to 30 s for it to go high |
-| GND | GND | |
-| 5V | the 9704's supply in | the Stamp's USB-C supply, passed through |
-| GPIO2 | the RGB LED, an SK6812 | on the board |
+| GPIO4, `uart1` TX | 14, RXD | 230400 8N1 |
+| GPIO5, `uart1` RX | 13, TXD | |
+| GPIO6 | 3, I_EN | starts and stops the modem |
+| GPIO7 | 7, I_BTD | high once booted, low once shut down; waited on both ways |
+| GPIO10 | 6, P̅_E̅N̅ | the supercapacitor charge enable, **active low**; optional |
+| GND | 1, 4 or 10, GND | signal ground |
+| | 15, V_IN+ and 16, V_IN- | 4.0 to 5.3 V, 500 mA: see Power |
+| GPIO2 | | the RGB LED, an SK6812, on the board |
 | GPIO3 | the button | on the board |
 | GPIO20, GPIO21 | `uart0`, the console | through the USB-C bridge |
 
 Kept clear: GPIO8 and GPIO9 (strapping pins, and the board's I2C) and
 GPIO18 and GPIO19 (USB).
 
-## Power: the Stamp's 5V, and the 9704's USB-C unplugged
+## Power: V_IN+, and the 9704's USB-C unplugged
 
 The 9704's header UART and its USB-C port are the same serial lines. With
 USB-C plugged in, the 9704's FTDI chip is powered and drives the modem's
@@ -36,27 +36,32 @@ RX, and a board on the header cannot talk over it: the modem answers
 nobody, the computer on USB included. Its TX still reaches the header, so
 a board can listen alongside USB, but not send.
 
-So the 9704 is powered from the header with its USB-C unplugged. The
-Stamp's 5V pin does it: the modem draws a few hundred mA, and its
-supercapacitor charges slowly, about 40 s to the green RDY LED. Both
-boards then run from the Stamp's USB-C; on a laptop's 500 mA port a
-Stamp that resets by itself while the 9704 charges is the supply sagging,
-and a charger or a powered hub gives the margin.
+So the 9704 is powered from the header with its USB-C unplugged, on
+V_IN+ (pin 15) and V_IN- (pin 16): 4.0 to 5.3 V, and the board limits
+itself to about 460 mA while its supercapacitor charges, about 40 s to
+the green RDY LED. A USB supply of its own is best, with its ground
+joined to the Stamp's; the Stamp's 5V pin works too, sharing the Stamp's
+USB-C. V_BATT (pin 12) is for a single lithium cell, 3.6 to 4.5 V, with
+no reverse-polarity protection and no charger on the board: never 5 V
+there. Ground Control recommends one input, not both.
 
 The control lines are optional. With fewer wired, take the matching lines
 out of the overlay's `rockblock` node, or `rb9704 begin` waits on a pin
 that is not there:
 
-- None: four wires, and the modem is taken to be powered. No edit
-  needed: `-DEXTRA_DTC_OVERLAY_FILE=no-control-pins.overlay` takes all
-  three out at build time (below).
-- P_EN only: `rb9704 power off` and `power on` over telnet restart a
-  modem that has hung, with nobody walking out to it. The one most worth
-  wiring.
-- I_BTD as well: a slow or failed boot is a clear timeout, not JSPR
-  errors after a fixed 4 s (`boot-delay-ms`).
-- I_EN adds little here. The ESP32-C3's ROM prints at reset on GPIO21,
-  the console, so nothing reaches the modem's pins before Zephyr runs.
+- None: four wires, and the modem is taken to be powered: I_EN has a
+  pull-up and P_EN a pull-down, so it boots and charges when power comes.
+  No edit needed: `-DEXTRA_DTC_OVERLAY_FILE=no-control-pins.overlay`
+  takes all three out at build time (below).
+- I_EN: `rb9704 power off` and `begin` over telnet restart a modem that
+  has hung, with nobody walking out to it. The one most worth wiring.
+- I_BTD as well: start-up and shutdown wait for the modem to say it has
+  followed I_EN, as Ground Control's page asks, not a fixed 4 s
+  (`boot-delay-ms`). Moving I_EN back before I_BTD has followed "may
+  result in damage to the 9704 module".
+- P_EN adds nothing for a modem on V_IN+: left open, the board's
+  pull-down keeps the charger on. Wired, it must be `GPIO_ACTIVE_LOW`;
+  driven high it switches the charger off.
 
 ## Build and flash
 
@@ -77,7 +82,7 @@ west build -b stamp_c3 samples/shell -- -DEXTRA_CONF_FILE=overlay-wifi.conf \
     -DEXTRA_DTC_OVERLAY_FILE=no-control-pins.overlay
 ```
 
-With no P_EN, the long press on the button ends without turning anything
+With no I_EN, the long press on the button ends without turning anything
 off, and `rb9704 power` answers `-ENOTSUP`.
 
 ## WiFi
@@ -147,7 +152,7 @@ airtime: use it on a network you trust.
 | Button | |
 | --- | --- |
 | short press | not begun: `rb9704 begin`. Begun: ask for the signal |
-| 2 s or more | end, and the supply off when P_EN is wired |
+| 2 s or more | end, and the modem off when I_EN is wired |
 
 Nothing on the button costs airtime. The LED runs at 24 of 255
 (`LEVEL` in `indicator.c`).
@@ -170,29 +175,34 @@ has no I_BTD: tie GPIO7 to 3.3 V for those runs.
 | | |
 | --- | --- |
 | WiFi, the stored network, telnet | works (2026-10-24) |
-| a real 9704 on TX and RX, powered from the Stamp's 5V: `begin`, `info`, `signal` | works (2026-10-25) |
+| a real 9704 on TX and RX, on V_IN+ from the Stamp's 5V: `begin`, `info`, `signal` | works (2026-10-25) |
 | the same with the 9704's USB-C plugged in | fails: the FTDI holds the modem's RX |
 | P_EN, I_EN, I_BTD: `begin` powers it up in about 2 s, `power off`, `begin` again | works (2026-10-25), 8 of 8 cycles, and 12 of 12 with up to 5 s between `power on` and `begin` |
 | under open sky: the constellation visible and 3 to 5 bars within seconds of `begin` | works (2026-10-25) |
-| staying up while active, on the Stamp's 5V | fails: see below |
-| provisioning, and a message sent | not yet |
+| staying up while active | failed with P_EN driven the wrong way: see below; with P_EN unconnected, up and answering throughout (2026-10-25) |
+| provisioning, and a message sent | works (2026-10-25): provisioned with 244 and 313 to 317, and "Stamp-C3 says hi", 16 bytes on topic 244, sent in 10 s with 3 to 4 bars and received in Cloudloop |
+| the reworked control pins outside: I_EN and I_BTD in Ground Control's sequence, P_EN wired and `GPIO_ACTIVE_LOW` | works (2026-10-25): up over 6 minutes under the sky, past every drop with P_EN the wrong way, and "Stamp-C3 P_EN low", 17 bytes on topic 244, sent in 6 s and received in Cloudloop |
+| an MT message down to the board | not yet |
 | the LED and button | the button's short press works; the busy colour reads orange, not white, at this brightness |
 
-### Open: the modem stops answering after a few minutes
+### The modem stopped answering after a few minutes: P_EN
 
-On 2026-10-25, powered from the Stamp's 5V, the modem stopped answering
-2 to 5 minutes after each `begin`, four times: once indoors, three times
-under open sky. Every request then gets `-EIO`, its signal reports stop,
-and it stays silent until the control lines are cycled; left alone with
-P_EN and I_EN high it was still silent after 9 minutes. Indoors the RDY
-LED went off when it happened.
+On 2026-10-25 the modem stopped answering 2 to 5 minutes after each
+`begin`, four times: once indoors, three times under open sky. Every
+request then got `-EIO`, its signal reports stopped, and it stayed silent
+until the control lines were cycled. Indoors the RDY LED went off.
 
-The likely cause is the supply: the 9704's input going below the 4.0 V
-it needs while it charges, after the Stamp's USB-C, its 5V pin and the
-leads. That is not yet measured. What would settle it: the voltage at
-the 9704's supply pin over those minutes; the 9704 on a 5 V supply of
-its own, GND joined to the Stamp's; and the 9704 on its own USB-C from a
-laptop for 30 minutes, which has not been tried for longer than a few
-seconds either. Whether the modem goes quiet on its serial port while it
-provisions is also not known, and a test that power-cycles it on
-silence would cut that short.
+The overlay had P_EN as `GPIO_ACTIVE_HIGH`. P_EN is active low (Ground
+Control's hardware page, pin 6, "Cap Charge Enable Signal (ACTIVE LOW)"),
+so every `begin` drove it high and switched the supercapacitor charger
+off: the modem ran on what the supercapacitor held until it was flat.
+The TX and RX test without control lines, where the pull-down keeps the
+charger on, did not stop. With P_EN taken off the header, the same
+firmware stayed up and sent its first message. The overlay now has
+`GPIO_ACTIVE_LOW`, and the module releases P_EN while the modem is off;
+with P_EN wired again on that firmware, the modem stayed up past every
+earlier drop and sent a second message.
+
+The module also now shuts down as the page sets out: I_EN low, then wait
+for I_BTD to go low before anything else, and the same wait on the way
+up. Before, `power off` dropped the pins and returned at once.

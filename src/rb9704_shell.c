@@ -197,7 +197,7 @@ static int cmd_spy(const struct shell *sh, size_t argc, char **argv)
 SHELL_STATIC_SUBCMD_SET_CREATE(rb9704_cmds,
 	SHELL_CMD(begin, NULL, "open the port and bring the library up", cmd_begin),
 	SHELL_CMD(end, NULL, "close it down", cmd_end),
-	SHELL_CMD_ARG(power, NULL, "power on|off: the board's supply, if wired", cmd_power, 2, 0),
+	SHELL_CMD_ARG(power, NULL, "power on|off: the modem, through I_EN, if wired", cmd_power, 2, 0),
 	SHELL_CMD(status, NULL, "what is known, without asking the modem", cmd_status),
 	SHELL_CMD(info, NULL, "IMEI, serial, versions, ICCID, SIM, temperature", cmd_info),
 	SHELL_CMD(signal, NULL, "signal bars now", cmd_signal),

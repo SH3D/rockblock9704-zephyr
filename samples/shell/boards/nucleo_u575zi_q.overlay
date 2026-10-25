@@ -15,7 +15,7 @@
 
 	rb9704: rockblock {
 		compatible = "rock7,rockblock-9704";
-		power-gpios = <&gpiof 15 GPIO_ACTIVE_HIGH>;		/* P_EN */
+		power-gpios = <&gpiof 15 GPIO_ACTIVE_LOW>;		/* P_EN, active low */
 		iridium-enable-gpios = <&gpiof 14 GPIO_ACTIVE_HIGH>;	/* I_EN */
 		booted-gpios = <&gpiof 13 GPIO_ACTIVE_HIGH>;		/* I_BTD */
 	};

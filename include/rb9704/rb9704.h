@@ -117,9 +117,10 @@ struct rb9704_callbacks {
 /* Replace the application's callbacks; NULL clears them. */
 void rb9704_set_callbacks(const struct rb9704_callbacks *cb);
 
-/* Switch the board's supply and modem enable, when the devicetree gives the
- * pins. Waits for the booted pin or boot-delay-ms on the way up. -ENOTSUP
- * with no power pin. rb9704_end first if it was begun. */
+/* Start or stop the modem through I_EN, when the devicetree gives it, in
+ * Ground Control's sequence: each way waits for I_BTD to follow, or
+ * boot-delay-ms without it. -ENOTSUP with no I_EN. rb9704_end first if it
+ * was begun. */
 int rb9704_power(bool on);
 
 /* Open the serial port and bring the library up: API version, SIM
