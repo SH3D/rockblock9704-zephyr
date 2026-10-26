@@ -1,0 +1,4 @@
+# GitHub language statistics. The Python under python/ is host-side test
+# and provisioning tooling; leave it out so the repo shows as C/Zephyr.
+python/** linguist-detectable=false
+*.sh linguist-detectable=false
