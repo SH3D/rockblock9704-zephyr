@@ -328,7 +328,7 @@ Source: `src/jspr_command.c:269-281`, parse `src/jspr.c:934-1007`.
 - The `messageProvisioning` callback (Python: `set_message_provisioning_callback`)
   fires only here, after the GET (`src/rockblock_9704.c:1181-1187`).
 
-### 2.12 PUT serviceConfig (resync), with its state dance
+### 2.12 PUT serviceConfig (resync), and the state changes around it
 
 `rbResyncServiceConfig()` (`src/rockblock_9704.c:1064-1120`):
 
@@ -721,7 +721,7 @@ Everything else is ignored.
    solicited `200` first, then `299`s.
 2. **A line with no 3-digit code in 200..500** makes the code scan run off
    the end of the line through the zeroed buffer, then `memmove` with a
-   negative length cast to `size_t` (`src/jspr.c:89-113`). Expect a crash.
+   negative length cast to `size_t` (`src/jspr.c:89-113`). The result is a crash.
    Never send banners, prompts or blank-ish lines of 9 bytes or more.
    On an M5Stamp-C3 it did crash (2026-10-25), when the UART's FIFO had
    overflowed and handed over fragments of old lines. rockblock9704-zephyr

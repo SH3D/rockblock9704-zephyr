@@ -1,7 +1,7 @@
 # Testing
 
-One fake modem, three places to run the code against it, and a few free
-checks against a real modem.
+The tests run one fake modem against the code in three places, and a few
+free checks against a real modem.
 
 | Level | What runs | Against | Needs |
 | --- | --- | --- | --- |
@@ -55,11 +55,11 @@ Every option has an environment variable as well: `RB9704_ZEPHYR_EXE`,
 On native_sim the modem UART is a `zephyr,native-tty-uart` node
 (`samples/shell/boards/native_sim.overlay`); the tests give it the fake's
 pty with `-modem_uart_port=`. The same option takes a real modem's
-`/dev/ttyUSB0`, which is how host Zephyr talks to real hardware.
+`/dev/ttyUSB0`, which is how host Zephyr reaches real hardware.
 
 ## The rig: two boards, one wire
 
-No USB-serial adapter to hand? Two boards with a UART wired between them
+Without a USB-serial adapter, two boards with a UART wired between them
 will do: one runs the sample, the other runs `tests/rig/bridge`, which
 copies bytes between that UART and its own USB serial port, where the
 fake answers.
@@ -84,8 +84,8 @@ toggle RTS on its USB port, or press reset, before the tests.
 
 ## Out of doors: the shell over WiFi
 
-A real modem needs the sky, and the sky is rarely where the USB cable
-reaches. `samples/shell/overlay-wifi.conf` puts the same shell on telnet,
+A real modem needs a view of the sky, which is usually further than a
+USB cable goes. `samples/shell/overlay-wifi.conf` puts the same shell on telnet,
 on any ESP32 board, so the board needs only power:
 
 ```sh
@@ -126,8 +126,8 @@ and the WiFi commands.
 
 The board overlays for the M5Stamp-C3, ESP32-S3-DevKitC, ESP32 DevKitC
 and NUCLEO-U575ZI-Q wire all three control lines, so `rb9704 begin`
-starts the modem through I_EN and waits for I_BTD to say it has booted,
-and `rb9704 power off` waits for I_BTD to say it has shut down.
+starts the modem through I_EN and waits for I_BTD to go high, and
+`rb9704 power off` waits for I_BTD to go low.
 
 | 9704 header | M5Stamp-C3 | ESP32-S3-DevKitC | ESP32 DevKitC | NUCLEO-U575ZI-Q |
 | --- | --- | --- | --- | --- |
@@ -135,7 +135,7 @@ and `rb9704 power off` waits for I_BTD to say it has shut down.
 | 13, TXD (board RX) | GPIO5 | GPIO18 | GPIO16 | PD9 |
 | 3, I_EN | GPIO6 | GPIO4 | GPIO25 | PF14 (D4) |
 | 7, I_BTD | GPIO7 | GPIO5 | GPIO26 | PF13 (D7) |
-| 6, P̅_E̅N̅, active low, optional | GPIO10 | GPIO6 | GPIO27 | PF15 (D2) |
+| 6, P_EN, active low, optional | GPIO10 | GPIO6 | GPIO27 | PF15 (D2) |
 | 1, 4 or 10, GND | GND | GND | GND | GND |
 
 The modem's supply goes to V_IN+ and V_IN- (pins 15 and 16), 4.0 to
@@ -167,18 +167,11 @@ binding 1.0.2:
 | a real 9704 (firmware v1.5.14), binding and native_sim, free checks | 2 | all pass |
 
 On 2026-10-25, the M5Stamp-C3 (ESP32-C3, RISC-V) with the shell over
-WiFi, and a real 9704 on its header pins, TX and RX only, powered from
-the Stamp's 5V: `begin`, `info` and `signal` all answer, nothing dropped
-(`boards/stamp_c3.md`).
-
-Later the same day, under open sky with P_EN unconnected: provisioned
-with topics 244 and 313 to 317, and one message, 16 bytes on topic 244,
-sent from the Stamp's shell over telnet and received in Cloudloop. The
-first message through a real modem and satellite.
-
-Then the reworked control pins outside, P_EN wired and active low: a
-second message, 17 bytes on topic 244, received in Cloudloop, and the
-modem left running overnight, up and answering for about 11 h 54 min with
-no drop and no reboot of the Stamp.
+WiFi and a real 9704 on its header pins, under open sky: `begin`, `info`
+and `signal` answer, the modem was provisioned, two messages on topic
+244 were received in Cloudloop, and the modem stayed up overnight with
+all three control lines wired. Those were the first messages through a
+real modem and a satellite. `boards/stamp_c3.md` has the pins, the runs
+and the P_EN fault found on the way.
 
 Not yet: an MT message down to the board.

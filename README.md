@@ -3,8 +3,8 @@
 The RockBLOCK 9704, Ground Control's Iridium Certus modem, on Zephyr: a
 module that builds Ground Control's own C library for any board with a
 UART, gives it the one thread it needs, and offers a small API, a shell
-command and a devicetree binding. With it come host tools in Python and a
-fake modem, so the same tests run against Ground Control's Python binding,
+command and a devicetree binding. It also includes host tools in Python
+and a fake modem, so the same tests run against Ground Control's Python binding,
 against Zephyr on `native_sim`, and against Zephyr on a board.
 
 The 9704 sends and receives IMT messages of up to 100 kB through the
@@ -16,7 +16,7 @@ rockblock9704-zephyr is written and maintained by Scott Penrose
 projects that send data home by satellite:
 [WII6](https://wii6.au/), a wave-measuring buoy, and
 [OGLAS](https://oglas.au/), a fleet of LoRa sensors, repeaters and hubs.
-Both run it, and neither is needed to use it.
+Both projects run it. The module does not depend on either.
 
 The source lives at
 [gitea.sh3d.com.au/Sh3d/rockblock9704-zephyr](https://gitea.sh3d.com.au/Sh3d/rockblock9704-zephyr)
@@ -45,36 +45,41 @@ and `CMakeLists.txt` compiles its portable core. What each part does:
 The library's source shows several things a caller has to work around;
 `docs/JSPR.md`, section 8, lists them all. The ones this module handles:
 
-- **Provisioning is asked once and kept for good**, a miss included. A
-  modem provisioned after the first send would refuse every topic until
-  a reboot. Before a send whose topic is not in what the library kept,
-  and after the modem refuses one, the module clears the library's cache
-  so it asks again: one free JSPR round trip.
-- **The blocking calls stop working once callbacks are registered.** The
-  module uses the async path only.
-- **A query during a send swallows the modem's segment requests**, since
-  the reader discards lines it is not waiting for. Info and signal
-  requests are refused with `-EBUSY` while a message is moving.
-- **No locking.** Every library call is on the worker thread.
-- **A send has no timeout, and the queue's count survives `rbEnd`.** The
-  async path only reacts to lines from the modem, so a modem that goes
-  quiet mid-send leaves the message in flight for good; `rb9704_cancel`
-  asks the modem to abandon it. `rbBegin` empties the queue but not the
-  count of it, which would make every send after a stuck one queue
-  without transmitting; `rb9704_begin` zeroes the count.
-- **A line with no status code reads past the library's buffer**, and on
-  a board it crashed. A modem talks before `rb9704_begin` opens the
-  library: its boot lines, once its power pins bring it up. The module
+- **Provisioning cache.** The library asks the modem for its provisioning
+  once and keeps the answer for the rest of the process, even when the
+  topic it wanted was not in it. A modem provisioned after the first send
+  would be refused on every topic until a reboot. Before a send whose
+  topic is not in what the library kept, and after the modem refuses one,
+  the module clears the library's cache so it asks again: one free JSPR
+  round trip.
+- **Blocking calls.** They stop working once callbacks are registered, so
+  the module uses the async path only.
+- **Queries during a send.** The reader discards lines it is not waiting
+  for, so a query during a send swallows the modem's segment requests.
+  Info and signal requests are refused with `-EBUSY` while a message is
+  moving.
+- **Locking.** The library has none, so every library call is on the
+  worker thread.
+- **Send timeout and queue count.** The async path only reacts to lines
+  from the modem, so a modem that goes quiet mid-send leaves the message
+  in flight for good; `rb9704_cancel` asks the modem to abandon it.
+  `rbBegin` empties the queue but not the count of it, which would make
+  every send after a stuck one queue without transmitting; `rb9704_begin`
+  zeroes the count.
+- **Lines without a status code.** One of those reads past the library's
+  buffer, and on a board it crashed. A modem sends lines before
+  `rb9704_begin` opens the library: its boot lines, once its power pins
+  bring it up. The module
   listens on the UART from boot and throws those bytes away, so a small
   hardware FIFO never overflows into fragments of old lines, and when the
   library opens part-way through a line the rest of that line is thrown
   away too.
 
 Others are for upstream to fix, and are listed in `docs/JSPR.md` for that:
-`setState` waits for a misspelt target, a line with no status code reads
-past its buffer (the module keeps the causes it knows of away from it),
-MT segment data is cut at 1446 characters, and the Python binding never
-releases the GIL.
+`setState` waits for a misspelt target, the overread of a line with no
+status code remains for any cause the module does not know of (section
+8.2), MT segment data is cut at 1446 characters, and the Python binding
+never releases the GIL.
 
 ## Using it
 
@@ -91,7 +96,7 @@ library, pinned, at the path the module looks in, and nothing else:
           - rockblock9704
 ```
 
-In the board overlay, a node on the modem's UART. The pins are optional;
+The board overlay needs a node on the modem's UART. The pins are optional;
 without them the modem is taken to be powered. I_EN starts and stops the
 modem; P_EN is the supercapacitor charge enable and is active low, so
 `GPIO_ACTIVE_LOW`, and it can be left unconnected:
@@ -110,16 +115,17 @@ modem; P_EN is the supercapacitor charge enable and is active low, so
 };
 ```
 
-**USB-C and the header are the same serial port.** The 9704's USB-C goes
-through an FTDI chip to the modem's UART, on the same lines as the
-header's TX and RX. With the USB-C cable plugged in, that chip drives the
-modem's RX, and a board on the header can hear the modem but not reach
-it: `rb9704_begin` fails with `-EIO`, and the computer on USB gets no
-answer either. Unplug the USB-C and power the 9704 from the header; a
-board's 5 V pin will do, as the modem draws a few hundred mA
+The 9704's USB-C goes through an FTDI chip to the modem's UART, on the
+same lines as the header's TX and RX, so the two are one serial port.
+With the USB-C cable plugged in, that chip drives the modem's RX, and a
+board on the header can receive from the modem but not send to it:
+`rb9704_begin` fails with `-EIO`, and the computer on USB gets no answer
+either. Unplug the USB-C and power the 9704 from the header; a board's
+5 V pin will do, as the modem draws a few hundred mA
 (`docs/boards/stamp_c3.md`).
 
-`CONFIG_RB9704` follows the node. Then `<rb9704/rb9704.h>`:
+`CONFIG_RB9704` is selected when the node is present. The API is in
+`<rb9704/rb9704.h>`:
 
 ```c
 static void mo_done(uint16_t topic, uint16_t id, int result, void *user)
@@ -195,9 +201,9 @@ real 9704 from Python and from `native_sim`.
 
 ## Boards
 
-Any board with a free UART, on any architecture Zephyr runs on. The
-library is portable C and the module has nothing tied to one CPU. The
-sample has overlays for:
+The module runs on any board with a free UART, on any architecture
+Zephyr runs on. The library is portable C and the module has nothing tied
+to one CPU. The sample has overlays for:
 
 | Board | CPU | Run on |
 | --- | --- | --- |
@@ -227,7 +233,7 @@ docs/JSPR.md                                 the protocol as the library speaks 
 docs/CLOUDLOOP.md                            account to first message
 docs/TESTING.md                              the tests and how to run them
 docs/boards/                                 notes for one board each: pins, setup
-west.yml                                     the pins
+west.yml                                     Ground Control's library, pinned
 ```
 
 ## Credits

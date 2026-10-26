@@ -18,7 +18,7 @@ The overlay is `samples/shell/boards/stamp_c3.overlay`, with
 | GPIO5, `uart1` RX | 13, TXD | |
 | GPIO6 | 3, I_EN | starts and stops the modem |
 | GPIO7 | 7, I_BTD | high once booted, low once shut down; waited on both ways |
-| GPIO10 | 6, P̅_E̅N̅ | the supercapacitor charge enable, **active low**; optional |
+| GPIO10 | 6, P_EN | the supercapacitor charge enable, **active low**; optional |
 | GND | 1, 4 or 10, GND | signal ground |
 | | 15, V_IN+ and 16, V_IN- | 4.0 to 5.3 V, 500 mA: see Power |
 | GPIO2 | | the RGB LED, an SK6812, on the board |
@@ -32,9 +32,9 @@ GPIO18 and GPIO19 (USB).
 
 The 9704's header UART and its USB-C port are the same serial lines. With
 USB-C plugged in, the 9704's FTDI chip is powered and drives the modem's
-RX, and a board on the header cannot talk over it: the modem answers
-nobody, the computer on USB included. Its TX still reaches the header, so
-a board can listen alongside USB, but not send.
+RX, and a board on the header cannot drive the line, so the modem gets
+no request from either side, the computer on USB included. Its TX still
+reaches the header, so a board can receive alongside USB, but not send.
 
 So the 9704 is powered from the header with its USB-C unplugged, on
 V_IN+ (pin 15) and V_IN- (pin 16): 4.0 to 5.3 V, and the board limits
@@ -54,9 +54,10 @@ that is not there:
   No edit needed: `-DEXTRA_DTC_OVERLAY_FILE=no-control-pins.overlay`
   takes all three out at build time (below).
 - I_EN: `rb9704 power off` and `begin` over telnet restart a modem that
-  has hung, with nobody walking out to it. The one most worth wiring.
-- I_BTD as well: start-up and shutdown wait for the modem to say it has
-  followed I_EN, as Ground Control's page asks, not a fixed 4 s
+  has hung, with nobody walking out to it. It is the line most worth
+  wiring.
+- I_BTD as well: start-up and shutdown wait for I_BTD to follow I_EN,
+  as Ground Control's page asks, not a fixed 4 s
   (`boot-delay-ms`). Moving I_EN back before I_BTD has followed "may
   result in damage to the 9704 module".
 - P_EN adds nothing for a modem on V_IN+: left open, the board's
@@ -164,8 +165,8 @@ Nothing on the button costs airtime. The LED runs at 24 of 255
    flash.
 2. With the modem wired: a short press goes white, then red, yellow or
    green with the signal.
-3. Over telnet: `rb9704 spy on`, `rb9704 info`, `rb9704 signal`. All
-   free.
+3. Over telnet: `rb9704 spy on`, `rb9704 info`, `rb9704 signal`. None
+   of the three costs airtime.
 
 A fake modem (`rb9704-fake`) on a USB-serial adapter in the modem's place
 has no I_BTD: tie GPIO7 to 3.3 V for those runs.
@@ -181,7 +182,7 @@ has no I_BTD: tie GPIO7 to 3.3 V for those runs.
 | under open sky: the constellation visible and 3 to 5 bars within seconds of `begin` | works (2026-10-25) |
 | staying up while active | failed with P_EN driven the wrong way: see below; with P_EN unconnected, up and answering throughout (2026-10-25) |
 | provisioning, and a message sent | works (2026-10-25): provisioned with 244 and 313 to 317, and "Stamp-C3 says hi", 16 bytes on topic 244, sent in 10 s with 3 to 4 bars and received in Cloudloop |
-| the reworked control pins outside: I_EN and I_BTD in Ground Control's sequence, P_EN wired and `GPIO_ACTIVE_LOW` | works (2026-10-25): "Stamp-C3 P_EN low", 17 bytes on topic 244, sent in 6 s and received in Cloudloop; left out overnight, the modem was up and answering for about 11 h 54 min with no drop and the Stamp did not reboot, where P_EN the wrong way stopped it within 5 minutes every time |
+| the reworked control pins outside: I_EN and I_BTD in Ground Control's sequence, P_EN wired and `GPIO_ACTIVE_LOW` | works (2026-10-25): "Stamp-C3 P_EN low", 17 bytes on topic 244, sent in 6 s and received in Cloudloop, and the modem up overnight; see below |
 | an MT message down to the board | not yet |
 | the LED and button | the button's short press works; the busy colour reads orange, not white, at this brightness |
 

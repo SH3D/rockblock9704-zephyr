@@ -1,9 +1,10 @@
 # Cloudloop and a RockBLOCK 9704, from the box to a message
 
-How to get a RockBLOCK 9704 from its box to a message seen on the
-internet, from a computer over its USB-C port: the account, the token,
-topics, provisioning, and the order to test things in. `rb9704` is the
-command line in `python/` (`python/README.md` has every verb).
+A RockBLOCK 9704 comes out of the box with an activation card and no
+Cloudloop account behind it. This is how to get from there to a message
+seen on the internet, from a computer over the modem's USB-C port.
+`rb9704` is the command line in `python/` (`python/README.md` has every
+verb).
 
 Written 2026-10-09 from Ground Control's and Cloudloop's documentation
 and the library's source. `rb9704 info` and the free JSPR verbs have run
@@ -71,7 +72,8 @@ serves a project.
 ### 3. The API token
 
 The API is how the tool reads messages and sends MT, and how the shore
-side will. A token is asked for, not made:
+side will. Ground Control issues the token; there is no page to generate
+one:
 
 1. Email <help@groundcontrol.com> for a Cloudloop **platform API token**
    for the account. Ask for one that can send MT: `DoSendImtMessage` needs
@@ -139,9 +141,9 @@ rb9704 --log provision.jsonl provision
 ```
 
 This asks the modem for its signal and its provisioning every 30 s and
-stops when topics appear, printing them. It talks JSPR directly, because
-the library only asks for provisioning when it is about to send, and
-asking this way costs nothing.
+stops when topics appear, printing them. It sends the JSPR requests itself,
+because the library only asks for provisioning when it is about to send,
+and asking this way costs nothing.
 
 ## The order to test in
 
@@ -155,7 +157,7 @@ money; the tool asks before each one, and `--yes` skips the question.
    `rb9704 ports`. The 9704 is the FT234XD, listed first.
 3. **Identity, indoors.** `rb9704 info` gives hardware and
    firmware versions, serial, IMEI, ICCID, whether the SIM is present and
-   talking, and the board temperature. Record the IMEI and ICCID against
+   connected, and the board temperature. Record the IMEI and ICCID against
    the Thing in Cloudloop.
 4. **Signal, outdoors.** `rb9704 signal --watch 600` reads
    the bars (0 to 5) every 5 s for ten minutes and ends with how often
@@ -197,30 +199,24 @@ version, SIM, operational state). In order of likelihood:
   a front-panel port), or the supercapacitor is still charging.
 - **Something odd.** `rb9704 jspr --setup 'GET hwInfo {}'
   'GET simStatus {}'` shows the modem's own answers; a 4xx code names
-  the problem (`409` unauthorized, `410` SIM not configured, `418` not
+  the problem (`409` unauthorised, `410` SIM not configured, `418` not
   provisioned).
 
 ## What has run
 
-On 2026-10-25, a RockBLOCK 9704 (firmware v1.5.14) on the header pins of
-an M5Stamp-C3 running the shell sample, under open sky, driven over WiFi
-by `rb9704 send` in the Zephyr shell (`boards/stamp_c3.md`):
+On 2026-10-25 a RockBLOCK 9704 (firmware v1.5.14) on the header pins of
+an M5Stamp-C3, running the shell sample under open sky, was found already
+provisioned with topics 244 (RAW) and 313 to 317, the Cloudloop colours,
+and sent two messages on topic 244 that arrived in Cloudloop whole. The
+library only asks the modem for its provisioning when it is about to
+send, so the first send is when the module, and `rb9704 status`, learn
+the topics. The board, its pins and the overnight run are in
+`boards/stamp_c3.md`.
 
-- **Provisioning.** Already done when first asked: topics 244 (RAW) and
-  313 to 317, the Cloudloop colours. The library only asks the modem
-  when it is about to send, so the first send is when the module, and
-  `rb9704 status`, learn the topics.
-- **MO.** Two messages on topic 244, `Stamp-C3 says hi` (16 bytes) and
-  `Stamp-C3 P_EN low` (17 bytes). Each was with the network 6 to 10 s
-  after the modem took it, with 3 to 4 bars, and each arrived in
-  Cloudloop whole.
-- **How Cloudloop shows a message.** The same bytes twice: the message
-  data in Base64 (`U3RhbXAtQzMgUF9FTiBsb3c`, the padding `=` left off)
-  and the payload in hex (`5374616D702D433320505F454E206C6F77`). The
-  CRC the library adds on the way out is checked and gone.
-
-The modem then stayed begun overnight, about 11 h 54 min, still
-provisioned and answering in the morning.
+Cloudloop shows a message's bytes twice: the message data in Base64
+(`U3RhbXAtQzMgUF9FTiBsb3c`, the padding `=` left off) and the payload in
+hex (`5374616D702D433320505F454E206C6F77`). The CRC the library adds on
+the way out is checked and gone.
 
 Not yet: MT, a session, and this command line's own `provision` and
 `send` against a real modem.
