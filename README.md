@@ -145,12 +145,15 @@ rb9704_begin(K_SECONDS(30));
 rb9704_send(RB9704_TOPIC_RAW, buf, len, K_SECONDS(10));	/* costs airtime */
 rb9704_send(RB9704_TOPIC_RAW, buf, len, K_NO_WAIT);	/* queues, never blocks */
 rb9704_cancel(K_SECONDS(10));				/* the one in flight; -ECANCELED via mo_done */
+rb9704_send_fill(RB9704_TOPIC_RAW, len, fill, user, K_SECONDS(10)); /* fill() writes it in place */
 ```
 
 Every request takes a timeout and waits no longer; with `K_NO_WAIT` a send
 queues and returns `-EINPROGRESS`, and its outcome, a refusal included,
 comes through `mo_done`. Callbacks run on the worker thread. One modem per
-system: the library keeps global state.
+system: the library keeps global state. `rb9704_send_fill` hands `fill`
+the module's own buffer, so a large message the application makes up as
+it goes does not have to be held twice.
 
 | Kconfig | Default | |
 | --- | --- | --- |
@@ -174,7 +177,16 @@ rb9704 cancel            abandon the message in flight
 rb9704 spy on|off        every JSPR line, both ways
 ```
 
-`samples/shell` is the shell plus callbacks that print what arrives.
+`samples/shell` is the shell plus callbacks that print what arrives, and
+`rbtest`, airtime tests with a payload `rb9704 pattern check` can check at
+the other end:
+
+```
+rbtest small <topic> [count=3] [gap_s=60]  32-byte messages one after another, each timed
+rbtest large <topic> [bytes=50000] confirm one large message; without confirm, only the cost
+rbtest status | stop                       the run so far, or no more after this one
+rbtest mt                                  the last MT, checked if it is a test message
+```
 
 ## Host tools
 

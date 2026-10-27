@@ -12,6 +12,8 @@ rb9704 - drive a RockBLOCK 9704 from the host over its USB-C port.
     rb9704 [-p PORT] listen [--out DIR] [--for S]
     rb9704 [-p PORT] session (--text T | --hex H | --file F) [--quiet S] [--yes]
     rb9704 cloud ping | things | mo | msg ID | mt ... | status ID
+    rb9704 pattern make [--size N] [--seq N] [--count N] [--out F]
+    rb9704 pattern check (--hex H | --b64 B | --file F)
 
 The modem side uses Ground Control's rockblock9704 package, a binding of
 the same C library this repository builds into Zephyr, so what works here
@@ -22,6 +24,10 @@ the provisioning when a message is sent, and asking that way is free.
 `send` and `session` cost airtime and ask before sending; --yes skips the
 question. Everything else on the modem side is local serial traffic and
 costs nothing. `cloud mt` costs airtime too.
+
+`pattern` makes and checks the test message the shell sample's `rbtest`
+sends (rb9704tools/pattern.py): `check` takes the bytes Cloudloop shows,
+in hex or Base64, and `make` gives a message to queue with `cloud mt`.
 
 The port is -p, or $RB9704_PORT, or the one FTDI FT234XD attached (the
 9704's USB-C bridge, 0403:6015). --log FILE appends every event as a JSON
@@ -41,6 +47,8 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+
+from rb9704tools import pattern
 
 FTDI_VID, FT234X_PID = 0x0403, 0x6015
 BAUD = 230400
@@ -570,6 +578,38 @@ def cmd_cloud(a):
         ev("cloud_mt", bytes=len(data), topic=a.topic, result=json.dumps(r))
 
 
+# ---------------------------------------------------------------- pattern
+
+def cmd_pattern(a):
+    if a.verb == "make":
+        data = pattern.make(a.size, seq=a.seq, count=a.count)
+        if a.out:
+            with open(a.out, "wb") as f:
+                f.write(data)
+        else:
+            print(data.hex())
+        return
+    if a.hex is not None:
+        data = bytes.fromhex(a.hex)
+    elif a.b64 is not None:
+        # Cloudloop leaves the padding off
+        data = base64.b64decode(a.b64 + "=" * (-len(a.b64) % 4))
+    else:
+        with open(a.file, "rb") as f:
+            data = f.read()
+    r = pattern.check(data)
+    if r is None:
+        die(f"{len(data)} bytes, not a test message: {data[:16].hex()}")
+    print(f"{r['kind']} {r['seq']}/{r['count']}, {r['got']} bytes, made at uptime "
+          f"{r['uptime_ms'] / 1000:.3f} s")
+    if r["ok"]:
+        print("every byte as expected")
+    elif r["bad_at"] == 8:
+        die(f"the header says {r['length']} bytes, {r['got']} arrived")
+    else:
+        die(f"wrong from byte {r['bad_at']}")
+
+
 # ---------------------------------------------------------------- main
 
 def add_payload(p, required=True):
@@ -659,6 +699,20 @@ def main():
     q.add_argument("--ring", default="RING_STYLE_NORMAL")
     add_payload(q)
     p.set_defaults(fn=cmd_cloud)
+
+    p = sub.add_parser("pattern", help="make or check an `rbtest` test message (free)")
+    ps = p.add_subparsers(dest="verb", required=True)
+    q = ps.add_parser("make", help="one test message, as hex or to a file")
+    q.add_argument("--size", type=int, default=32)
+    q.add_argument("--seq", type=int, default=1)
+    q.add_argument("--count", type=int, default=1)
+    q.add_argument("--out", help="write the bytes here; default hex on stdout")
+    q = ps.add_parser("check", help="every byte of one, as Cloudloop shows it")
+    g = q.add_mutually_exclusive_group(required=True)
+    g.add_argument("--hex")
+    g.add_argument("--b64")
+    g.add_argument("--file")
+    p.set_defaults(fn=cmd_pattern)
 
     a = ap.parse_args()
     LOG = a.log

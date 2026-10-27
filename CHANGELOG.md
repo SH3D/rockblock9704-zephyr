@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- `rbtest` in the shell sample: airtime tests with a payload that can be
+  checked at the other end. `rbtest small` sends a few 32-byte messages
+  one after another and logs how long each took, `rbtest large` sends one
+  message of up to 50000 bytes and sends nothing without `confirm`, and
+  `rbtest mt` shows the last MT and checks it if it is a test message.
+  `rb9704 pattern make` and `check` in `python/` make and check the same
+  messages. Not yet run against a real modem.
+- `rb9704_send_fill`: as `rb9704_send`, with the message written straight
+  into the module's buffer, so a large generated message is not held
+  twice. `overlay-large.conf` raises the limit to 50000 bytes; on the
+  M5Stamp-C3 that fits on the USB console and not beside WiFi
+  (`docs/boards/stamp_c3.md`).
+
 - Docs: the M5Stamp-C3 left out overnight on 0.3.0, P_EN wired and
   active low: the modem up and answering for about 11 h 54 min with no
   drop, and the Stamp did not reboot. P_EN driven the wrong way had

@@ -530,12 +530,26 @@ int rb9704_info(struct rb9704_info *out, k_timeout_t timeout)
 	return rc;
 }
 
+static void fill_copy(uint8_t *buf, size_t len, void *user)
+{
+	memcpy(buf, user, len);
+}
+
 int rb9704_send(uint16_t topic, const void *data, size_t len, k_timeout_t timeout)
+{
+	if (data == NULL) {
+		return -EINVAL;
+	}
+	return rb9704_send_fill(topic, len, fill_copy, (void *)data, timeout);
+}
+
+int rb9704_send_fill(uint16_t topic, size_t len, rb9704_fill_t fill, void *user,
+		     k_timeout_t timeout)
 {
 	bool abandoned;
 	int rc;
 
-	if (topic < RB9704_TOPIC_MIN || data == NULL || len == 0 || len > sizeof(mo_buf)) {
+	if (topic < RB9704_TOPIC_MIN || fill == NULL || len == 0 || len > sizeof(mo_buf)) {
 		return -EINVAL;
 	}
 	rc = take_slot(timeout);
@@ -545,7 +559,7 @@ int rb9704_send(uint16_t topic, const void *data, size_t len, k_timeout_t timeou
 	req.op = OP_SEND;
 	req.topic = topic;
 	req.len = len;
-	memcpy(mo_buf, data, len);
+	fill(mo_buf, len, user);
 	rc = submit(timeout, &abandoned);
 	if (abandoned) {
 		return -EINPROGRESS;

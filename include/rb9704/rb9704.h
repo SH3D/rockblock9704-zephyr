@@ -145,6 +145,16 @@ int rb9704_end(k_timeout_t timeout);
  */
 int rb9704_send(uint16_t topic, const void *data, size_t len, k_timeout_t timeout);
 
+/* Writes len bytes of a message into buf. */
+typedef void (*rb9704_fill_t)(uint8_t *buf, size_t len, void *user);
+
+/* As rb9704_send, with the message written straight into this module's
+ * buffer by fill, on the caller's thread, once the request slot is taken.
+ * A generated message near CONFIG_RB9704_MESSAGE_MAX then needs no buffer
+ * of the caller's as well: the library already keeps two of that size. */
+int rb9704_send_fill(uint16_t topic, size_t len, rb9704_fill_t fill, void *user,
+		     k_timeout_t timeout);
+
 /* Ask the modem to abandon the message in flight. Returns 0 once the
  * request is on the wire; the outcome, -ECANCELED when the modem agrees,
  * comes through mo_done, and until then the message counts as in flight.

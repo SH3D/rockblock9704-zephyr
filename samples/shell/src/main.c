@@ -15,6 +15,8 @@
 
 #include <rb9704/rb9704.h>
 
+#include "rbtest.h"
+
 #ifdef CONFIG_WIFI
 #include "wifi.h"
 #endif
@@ -28,6 +30,7 @@ static void on_mo_done(uint16_t topic, uint16_t id, int result, void *user)
 {
 	ARG_UNUSED(user);
 	LOG_INF("mo done topic %u id %u result %d", topic, id, result);
+	rbtest_mo_done(topic, id, result);
 #ifdef CONFIG_LED_STRIP
 	indicator_flash_mo(result);
 #endif
@@ -47,6 +50,7 @@ static void on_mt(const struct rb9704_mt *mt, void *user)
 	text[n] = '\0';
 	LOG_INF("mt topic %u id %u len %u crc %08x: %s", mt->topic, mt->id, (unsigned int)mt->len,
 		crc32_ieee(mt->data, mt->len), text);
+	rbtest_mt(mt);
 #ifdef CONFIG_LED_STRIP
 	indicator_flash_mt();
 #endif

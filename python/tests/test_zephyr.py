@@ -10,6 +10,8 @@ import zlib
 
 import pytest
 
+from rb9704tools import pattern
+
 
 def begin(z):
     c, f = z
@@ -181,3 +183,61 @@ def test_end(zephyr):
     c.out.expect(r"end: ok")
     c.sh("rb9704 send 244 after-end")
     c.out.expect(r"send: -\d+ ENOTCONN")
+
+
+def test_rbtest_small_sends_checkable_messages(zephyr):
+    """`rbtest small`, two messages with no gap: each reaches the network
+    whole, numbered, and its time is logged."""
+    c, f = zephyr
+    begin(zephyr)
+    c.sh("rbtest small 244 2 0")
+    c.out.expect(r"2 messages of 32 bytes on topic 244")
+    for seq in (1, 2):
+        m = f.out.expect(r"^MO 244 \d+ (\w+)")
+        r = pattern.check(bytes.fromhex(m.group(1)))
+        assert r["ok"] and (r["kind"], r["seq"], r["count"], r["got"]) == ("S", seq, 2, 32)
+        c.out.expect(r"rbtest S %d/2: sent in \d+\.\d{3} s" % seq)
+    c.out.expect(r"rbtest S: 2 of 2 sent$")
+    c.sh("rbtest status")
+    c.out.expect(r"last run S: 2 of 2 done, 32 bytes each on topic 244")
+    c.out.expect(r"2: sent in \d+\.\d{3} s")
+
+
+def test_rbtest_small_logs_a_failure(zephyr):
+    c, f = zephyr
+    begin(zephyr)
+    f.cmd("mo-fail network_error")
+    c.sh("rbtest small 244 1 0")
+    c.out.expect(r"rbtest S 1/1: failed after \d+ ms: -\d+")
+    c.out.expect(r"rbtest S: 0 of 1 sent$")
+
+
+def test_rbtest_large_asks_first(zephyr):
+    """Without confirm nothing goes; with it, one message of the size given
+    (the 50000 default needs CONFIG_RB9704_MESSAGE_MAX raised)."""
+    c, f = zephyr
+    begin(zephyr)
+    c.sh("rbtest large 244 2000")
+    c.out.expect(r"Nothing sent. To send it: rbtest large 244 2000 confirm")
+    with pytest.raises(AssertionError):
+        f.out.expect(r"^MO ", timeout=2)
+    c.sh("rbtest large 244 confirm")
+    c.out.expect(r"50000 bytes: from 17 to \d+")
+    c.sh("rbtest large 244 2000 confirm")
+    m = f.out.expect(r"^MO 244 \d+ (\w+)")
+    r = pattern.check(bytes.fromhex(m.group(1)))
+    assert r["ok"] and (r["kind"], r["got"]) == ("L", 2000)
+    c.out.expect(r"rbtest L 1/1: sent in")
+
+
+def test_rbtest_mt_checks_a_test_message(zephyr):
+    c, f = zephyr
+    begin(zephyr)
+    c.sh("rbtest mt")
+    c.out.expect(r"no MT since boot|mt\s+\d+ since boot")
+    f.cmd("mthex 244 " + pattern.make(1200, seq=4, count=5).hex())
+    c.out.expect(r"rbtest: MT is a test message, M 4/5, all 1200 bytes as expected")
+    c.sh("rbtest mt")
+    c.out.expect(r"topic 244 id \d+, 1200 bytes, crc %08x" % zlib.crc32(pattern.make(1200, seq=4, count=5)))
+    c.out.expect(r"52 42 54 01 4d 04 05 00 00 00 04 b0")
+    c.out.expect(r"test message M 4/5, all 1200 bytes as expected")

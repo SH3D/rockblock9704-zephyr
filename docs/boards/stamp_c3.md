@@ -171,6 +171,110 @@ Nothing on the button costs airtime. The LED runs at 24 of 255
 A fake modem (`rb9704-fake`) on a USB-serial adapter in the modem's place
 has no I_BTD: tie GPIO7 to 3.3 V for those runs.
 
+## Airtime tests: `rbtest`
+
+`samples/shell/src/rbtest.c`. Every test message has a 16-byte header
+(`RBT`, the kind, its number in the run, its length, the uptime it was
+made at) and then a ramp, byte k being k % 510 counted up to 255 and back
+down, so a lost or repeated segment shows in a hex dump. Cloudloop shows
+each message in hex and in Base64; either goes to the command line in
+`python/`, which checks every byte:
+
+```sh
+rb9704 pattern check --b64 UkJUAVMBAwAAAAAgAAAXfBAREhMUFRYXGBkaGxwdHh8
+S 1/3, 32 bytes, made at uptime 6.012 s
+every byte as expected
+```
+
+A run is on a thread of its own, so the shell stays free, and each
+message is logged when the modem accepts it and when it finishes:
+
+```
+rbtest small 244                 # 3 messages of 32 bytes, 60 s apart
+rbtest small 244 5 120           # 5 of them, 120 s apart
+rbtest status                    # how long each took
+rbtest stop                      # no more after the one in flight
+```
+
+The log lines, with the times left out:
+
+```
+<inf> rbtest: rbtest S 1/3: 32 bytes on topic 244, accepted in <ms> ms
+<inf> rbtest: rbtest S 1/3: sent in <s.ms> s
+...
+<inf> rbtest: rbtest S: 3 of 3 sent
+```
+
+A message that has not finished after 10 minutes, 30 for a large one, is
+cancelled and counted as failed.
+
+### One large message
+
+```
+rbtest large 244                 # says what it would send, and sends nothing
+rbtest large 244 confirm         # sends 50000 bytes
+rbtest large 244 20000 confirm   # or another size
+```
+
+The size is limited by `CONFIG_RB9704_MESSAGE_MAX`, 2048 bytes unless
+raised. 50000 needs `overlay-large.conf`, and on the Stamp-C3 that does
+not fit beside WiFi: the module keeps three buffers of that size, the
+library's MO and MT buffers and its own copy for sends, and the link
+overflows by about 11 kB. Trimming the network buffers and the receive
+ring still left it 3 kB over. So the 50000-byte test runs on the USB
+console, with a laptop beside the board:
+
+```sh
+west build -b stamp_c3 samples/shell -- -DEXTRA_CONF_FILE=overlay-large.conf
+```
+
+With WiFi, 40000 bytes links, using 96% of the RAM, which leaves little
+for anything added later:
+
+```sh
+west build -b stamp_c3 samples/shell -- -DEXTRA_CONF_FILE=overlay-wifi.conf \
+    -DCONFIG_RB9704_MESSAGE_MAX=40000
+```
+
+`rbtest large` writes its message straight into the module's buffer
+(`rb9704_send_fill`), so the test itself adds no fourth buffer.
+
+### Messages to the board (MT)
+
+The module listens for MT whenever it is begun, not only around a send:
+the modem sends `messageTerminate` lines unprompted, the board logs each
+whole MT (`mt topic 244 id 3 len 32 crc ...`) and the LED flashes cyan.
+What has not been seen yet is when the network delivers: straight away
+to a modem sitting idle under the sky, or only after it next sends. The
+test is set up to find out:
+
+1. `rb9704 begin` under open sky, and wait for bars. Send nothing.
+2. From any computer with the Cloudloop token, queue a 32-byte test
+   message, which costs airtime:
+
+   ```sh
+   rb9704 pattern make --size 32 --out mt.bin
+   rb9704 cloud mt --file mt.bin
+   ```
+
+   or `rb9704 cloud mt --text "ping 1"`, or the Cloudloop web interface.
+3. Watch the log, then `rbtest mt`:
+
+   ```
+   mt        1 since boot, the last 12 s ago
+             topic 244 id 3, 32 bytes, crc c07a7327
+             52 42 54 01 4d 01 01 00 00 00 00 20 00 00 00 00 10 11 12 ...
+             RBT.M...... ....................
+             test message M 1/1, all 32 bytes as expected
+   ```
+
+4. If nothing has arrived after 10 minutes, `rbtest small 244 1` and see
+   whether the MT follows the send. `rb9704 cloud status <id>` says what
+   Cloudloop thinks happened to it.
+
+An MT larger than `CONFIG_RB9704_MESSAGE_MAX` cannot be received; with
+the 2048-byte default, keep test MTs small.
+
 ## What has run
 
 | | |
@@ -183,7 +287,9 @@ has no I_BTD: tie GPIO7 to 3.3 V for those runs.
 | staying up while active | failed with P_EN driven the wrong way: see below; with P_EN unconnected, up and answering throughout (2026-10-25) |
 | provisioning, and a message sent | works (2026-10-25): provisioned with 244 and 313 to 317, and "Stamp-C3 says hi", 16 bytes on topic 244, sent in 10 s with 3 to 4 bars and received in Cloudloop |
 | the reworked control pins outside: I_EN and I_BTD in Ground Control's sequence, P_EN wired and `GPIO_ACTIVE_LOW` | works (2026-10-25): "Stamp-C3 P_EN low", 17 bytes on topic 244, sent in 6 s and received in Cloudloop, and the modem up overnight; see below |
-| an MT message down to the board | not yet |
+| an MT message down to the board | not yet: `rbtest mt`, above |
+| `rbtest small`, three timed messages | not yet: works against the fake modem on native_sim |
+| `rbtest large`, 50000 bytes | not yet: the USB-console build links; works against the fake on native_sim at 2000 bytes |
 | the LED and button | the button's short press works; the busy colour reads orange, not white, at this brightness |
 
 ### The modem stopped answering after a few minutes: P_EN

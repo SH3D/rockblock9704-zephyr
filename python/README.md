@@ -44,6 +44,8 @@ macOS, Windows). Without the `modem` extra, the fake modem, `jspr`,
 | `cloud msg ID` | | one message record and its Lingo form |
 | `cloud mt --text/--hex/--file [--thing ID]` | airtime | queue an MT on `IMT_TOPIC_RAW` |
 | `cloud status ID` | | an MT's delivery status |
+| `pattern make [--size N] [--out F]` | | an `rbtest` test message, as hex or a file, to queue with `cloud mt` |
+| `pattern check --hex/--b64/--file` | | check every byte of one, as Cloudloop shows it |
 
 The verbs that cost airtime print the size and ask; `--yes` skips the
 question and is the only way to send from a script.
